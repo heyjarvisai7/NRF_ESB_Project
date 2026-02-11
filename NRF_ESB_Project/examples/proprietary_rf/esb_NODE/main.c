@@ -111,9 +111,10 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 #define     RX_QUEUE_SIZE                     7
 #define     APP_BUF_SIZE                      500 
 
+
 typedef enum 
 {
-    DATA_PACKET,
+    DATA_PACKET = 1,
     PING_PACKET,
     INS_PACKET
 
@@ -208,6 +209,8 @@ volatile rx_packet_t rx_queue[RX_QUEUE_SIZE];
 volatile uint8_t rx_head    =   0;
 volatile uint8_t rx_tail    =   0;
 volatile uint8_t buf_count  =   0;
+
+uint8_t PACKET = 0;
 
 
 uint8_t received_data = 0;
@@ -538,13 +541,30 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
                     if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                     {
-                       //circlearr = rx_payload.data;
 
-                       /*Need to store in comming packets*/
-                       RX_SUCESS_FLAG = 1;
+                         /*Need to store in comming packets*/
+                         RX_SUCESS_FLAG = 1;
 
-                       rx_queue_push(rx_payload.data, rx_payload.length);
-       
+                         switch ( rx_payload.data[POS_PACKET_TYPE] )
+                         {
+                              case    PING_PACKET :
+                                      
+                                          PACKET   =   PING_PACKET;
+                              break;
+
+                              case    INS_PACKET  :
+                                      
+                                          PACKET   =   INS_PACKET;
+                              break;
+
+                              case    DATA_PACKET :
+                                    
+                                          PACKET   =    DATA_PACKET;   
+                                          rx_queue_push(rx_payload.data, rx_payload.length);
+                              break;
+                         }
+
+                       
                     }  
 
           break;
@@ -736,8 +756,7 @@ void reRouting(void)
 
 void pingPacket(void)
 {
-          //if(circlearr1[POS_PACKET_TYPE] == PING_PACKET  && circlearr1[POS_LENGTH] == 0)
-          //if(rx_queue[rx_tail].data[POS_PACKET_TYPE] == PING_PACKET  && rx_queue[rx_tail].data[POS_LENGTH] == 0)
+      
           if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 0 )
           {
                 memcpy(&advertisment_pcket,rx_payload.data + sizeof(header), sizeof(advertisment_pcket));
@@ -757,14 +776,14 @@ void pingPacket(void)
                 Ack_Txing = 0;
 
           }
-          //if(rx_queue[rx_tail].data[POS_PACKET_TYPE] == PING_PACKET  && rx_queue[rx_tail].data[POS_LENGTH] == 1)
+          
           if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 1 )
           {
                 advertisment_pcket.circle_no = Current_Circle;
                 advertisment_pcket.node_id = addr_prefix[0];
                 memset(&header,0,sizeof(header));
                 header.packet_type = PING_PACKET;
-                //if(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && (POS_CIRCLE_ARRAY+ Current_Circle)
+                
                 if(rx_payload.data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && (POS_CIRCLE_ARRAY+ Current_Circle) != 0) 
                 {
                       header.Direction = BACKWORD;
@@ -776,8 +795,23 @@ void pingPacket(void)
                 memcpy(tx_payload.data,&header,sizeof(header));
                 memcpy(tx_payload.data + sizeof(header), &advertisment_pcket, sizeof(advertisment_pcket));
                 tx_payload.length = sizeof(header) + sizeof(advertisment_pcket);
-                check_direction(tx_payload.data);
-                sendDataBidirectional( tx_payload.data[POS_DIRECTION] );
+                //check_direction(tx_payload.data);
+                //sendDataBidirectional( tx_payload.data[POS_DIRECTION] );
+
+                nrf_delay_us(50000);
+                nrf_esb_stop_rx();
+
+
+                if ( tx_payload.data[POS_DIRECTION] == FORWARD )
+                {
+                    set_slave_adress(rx_payload.data[POS_CIRCLE_ARRAY + (Current_Circle + 1)], arrays[Current_Circle + 1]);
+                }
+                else
+                {
+                    set_slave_adress(rx_payload.data[POS_CIRCLE_ARRAY + (Current_Circle - 1)], arrays[Current_Circle - 1]);
+                }
+
+                sendDataToNextSlave();
           }
 }
 
@@ -994,17 +1028,22 @@ void sendDataBidirectional(uint8_t direction)
               Fwrd_Dirct = 0;
               nrf_delay_us(50000);
               nrf_esb_stop_rx();
-              if( header.packet_type == DATA_PACKET || header.packet_type == INS_PACKET )
+              if( rx_queue[rx_tail].data[POS_PACKET_TYPE] == DATA_PACKET )
               {
                   
                   memcpy(tx_payload.data, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length);
                   
                   tx_payload.length  = rx_queue[rx_tail].length;
+                  set_slave_adress(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) + 1],arrays[Current_Circle + 1]);
 
+              }
+              else
+              {
+                  set_slave_adress(rx_payload.data[POS_CIRCLE_ARRAY + (Current_Circle + 1)], arrays[Current_Circle + 1]);
               }
               tx_payload.noack = false;
               
-              set_slave_adress(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) + 1],arrays[Current_Circle + 1]);
+              
               sendDataToNextSlave();
               rx_queue_pop();
         }
@@ -1015,24 +1054,35 @@ void sendDataBidirectional(uint8_t direction)
               Rvsr_Dirct = 0;
               nrf_delay_us(50000);
               nrf_esb_stop_rx();
-             if( header.packet_type == DATA_PACKET || header.packet_type == INS_PACKET )
+
+              if( header.packet_type == DATA_PACKET )
               {
                   memcpy(tx_payload.data, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length);
                   tx_payload.data[POS_CIRCLE_ARRAY + Current_Circle] = addr_prefix[0];
                   tx_payload.length  = rx_queue[rx_tail].length;
-              }
-              tx_payload.noack = false;
-              
-              
-              if (Current_Circle == 0)    
-              {
-                  // send the response to DCU s
-                  set_slave_adress(DCU_PREFIX[0], DCU_BASE); // sending to DCU
-                  sendDataToNextSlave();
-                  
+
+                  if (Current_Circle == 0)    
+                  {
+                      // send the response to DCU s
+                      set_slave_adress(DCU_PREFIX[0], DCU_BASE); // sending to DCU
+                      sendDataToNextSlave();
+            
+                  }
+
+                  else  
+                  {
+                    set_slave_adress(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1],arrays[Current_Circle - 1]);
+                  }
               }
 
-              else    set_slave_adress(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1],arrays[Current_Circle - 1]);
+              else
+              {
+                  set_slave_adress(rx_payload.data[POS_CIRCLE_ARRAY + (Current_Circle - 1)], arrays[Current_Circle - 1]);
+              }
+
+
+              tx_payload.noack = false;
+              
               sendDataToNextSlave();
               rx_queue_pop();    
         }
@@ -1041,6 +1091,7 @@ void sendDataBidirectional(uint8_t direction)
 
 void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
 {
+      nrf_delay_us(500);
       nrf_esb_stop_rx();
  
       if ( direction == FORWARD )
@@ -1056,8 +1107,15 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
       {
           memcpy( tx_payload.data, data, length );
           tx_payload.length = length;
- 
-          set_slave_adress(DCU_PREFIX[0], DCU_BASE);
+          
+          if(Current_Circle == 0)
+          {
+              set_slave_adress(DCU_PREFIX[0], DCU_BASE);
+          }
+          else
+          {
+              set_slave_adress(tx_payload.data[POS_CIRCLE_ARRAY + Current_Circle - 1], arrays[Current_Circle - 1]);
+          }
           sendDataToNextSlave();
       }
 }
@@ -1195,7 +1253,7 @@ void send_data_dcu(uint16_t length)
 
 void main(void)
 
-{
+  {
     uint32_t err_code; 
     uint8_t check_nerby[PACKET_HEADER_SIZE];
 
@@ -1214,7 +1272,7 @@ void main(void)
     err_code = esb_init();
     APP_ERROR_CHECK(err_code);
 
-    NRF_LOG_DEBUG("Middle NODE lisiting started");
+    NRF_LOG_DEBUG("NODE");
 
     //err_code = esb_uart_init();
     uart_init();
@@ -1227,9 +1285,58 @@ void main(void)
     while(true)
     {
 
-        if ( RX_SUCESS_FLAG == 1 )
+        switch ( PACKET )
         {
-               RX_SUCESS_FLAG = 0;
+            case    DATA_PACKET  :
+
+                       if ( buf_count != 0 )
+                       {
+                            if ( rx_queue[rx_tail].data[POS_DIRECTION] == BACKWORD )
+                            {
+                                /* Respone from meter */
+
+                                fillPacket(BACKWORD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length);
+                                rx_queue_pop();
+                            }
+
+                            else
+                            {
+                                /* Request from DCU */
+
+                                if(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle ) + 1] != 0)
+                                {
+                                   fillPacket( FORWARD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length );
+                                   rx_queue_pop();
+                                }
+                                else
+                                {
+                                  Construct_DLMS_Packet();
+
+                                }
+                            }
+                       }
+                       PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+            break;
+
+            case    PING_PACKET : 
+                        
+                        pingPacket();
+                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+            break;
+
+            case    INS_PACKET :
+                        
+                        rx_payload.data[ POS_CIRCLE_ARRAY + Current_Circle ] = addr_prefix[0];
+                        fillPacket( BACKWORD, rx_payload.data, rx_payload.length );
+                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+            break;
+
+        }
+
+        #if 0
+        if ( buf_count != 0 )
+        {
+               
                memcpy(&header, rx_payload.data, PACKET_HEADER_SIZE);
 
                switch (  rx_queue[rx_tail].data[POS_PACKET_TYPE] )
@@ -1265,10 +1372,6 @@ void main(void)
                              
                     break;
 
-                    case    PING_PACKET: 
-
-                               pingPacket();
-                    break;
 
                     case    INS_PACKET: 
                               
@@ -1284,6 +1387,7 @@ void main(void)
                }             
                         
         }
+        #endif
 
         if(Diagnostic_Test == 1)
         {

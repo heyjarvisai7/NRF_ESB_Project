@@ -113,7 +113,7 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 
 typedef enum 
 {
-    DATA_PACKET,
+    DATA_PACKET = 1,
     PING_PACKET,
     INS_PACKET
 
@@ -208,6 +208,8 @@ volatile rx_packet_t rx_queue[RX_QUEUE_SIZE];
 volatile uint8_t rx_head    =   0;
 volatile uint8_t rx_tail    =   0;
 volatile uint8_t buf_count  =   0;
+
+uint8_t PACKET = 0;
 
 
 uint8_t received_data = 0;
@@ -547,10 +549,24 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                        RX_SUCESS_FLAG = 1;
                       // nrf_delay_ms(500);
 
-                       rx_queue_push(rx_payload.data, rx_payload.length);
+                       switch ( rx_payload.data[POS_PACKET_TYPE] )
+                       {
+                            case    PING_PACKET :
+                                    
+                                        PACKET   =   PING_PACKET;
+                            break;
 
-                       
-                      
+                            case    INS_PACKET  :
+                                    
+                                        PACKET   =   INS_PACKET;
+                            break;
+
+                            case    DATA_PACKET :
+                                  
+                                        PACKET   =    DATA_PACKET;   
+                                        rx_queue_push(rx_payload.data, rx_payload.length);
+                            break;
+                       }
        
                     }  
 
@@ -743,12 +759,11 @@ void reRouting(void)
 
 void pingPacket(void)
 {
-          //if(circlearr1[POS_PACKET_TYPE] == PING_PACKET  && circlearr1[POS_LENGTH] == 0)
-          if(rx_queue[rx_tail].data[POS_PACKET_TYPE] == PING_PACKET  && rx_queue[rx_tail].data[POS_LENGTH] == 0)
-          //if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 0 )
+          
+          if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 0 )
           {
-                //memcpy(&advertisment_pcket,rx_payload.data + sizeof(header), sizeof(advertisment_pcket));
-                memcpy( &advertisment_pcket, rx_queue[rx_tail].data + sizeof( header ), sizeof( advertisment_pcket ) );
+                memcpy(&advertisment_pcket,rx_payload.data + sizeof(header), sizeof(advertisment_pcket));
+                //memcpy( &advertisment_pcket, rx_queue[rx_tail].data + sizeof( header ), sizeof( advertisment_pcket ) );
                 if(rx_payload.rssi > 0 && Nxt_table_index < MAX_NEIGHBORS && advertisment_pcket.circle_no == Current_Circle +1)
                 {
                       Nxt_neighbor_table[Nxt_table_index].node_id = advertisment_pcket.node_id;
@@ -765,15 +780,15 @@ void pingPacket(void)
                 Ack_Txing = 0;
 
           }
-          if(rx_queue[rx_tail].data[POS_PACKET_TYPE] == PING_PACKET  && rx_queue[rx_tail].data[POS_LENGTH] == 1)
-          //if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 1 )
+          //if(rx_queue[rx_tail].data[POS_PACKET_TYPE] == PING_PACKET  && rx_queue[rx_tail].data[POS_LENGTH] == 1)
+          if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 1 )
           {
                 advertisment_pcket.circle_no = Current_Circle;
                 advertisment_pcket.node_id = addr_prefix[0];
                 memset(&header,0,sizeof(header));
                 header.packet_type = PING_PACKET;
-                if(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle)] != 0)
-                //if(rx_payload.data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && (POS_CIRCLE_ARRAY+ Current_Circle) != 0) 
+                //if(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle)] != 0)
+                if(rx_payload.data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && (POS_CIRCLE_ARRAY+ Current_Circle) != 0) 
                 {
                       header.Direction = BACKWORD;
                 }
@@ -910,7 +925,7 @@ void doDiagnosticTest(void)
                         //nrf_delay_ms(500);
                         set_slave_adress( neighbour_no ,arrays[Current_Circle - 1]);
                         memset(&header,0,sizeof(header));
-                        header.packet_type = 1;
+                        header.packet_type = PING_PACKET;
                         header.length = 1;
                         header.circle_array[Current_Circle] = addr_prefix[0];
                         memcpy(tx_payload.data,&header,sizeof(header));
@@ -1232,7 +1247,7 @@ void main(void)
     err_code = esb_init();
     APP_ERROR_CHECK(err_code);
 
-    NRF_LOG_DEBUG("Middle1 NODE lisiting started");
+    NRF_LOG_DEBUG("NODE1");
 
     //err_code = esb_uart_init();
     uart_init();
@@ -1245,63 +1260,52 @@ void main(void)
     while(true)
     {
          NRF_LOG_FLUSH();
-        if ( RX_SUCESS_FLAG == 1 )
+
+        switch ( PACKET )
         {
-               RX_SUCESS_FLAG = 0;
-               memcpy(&header, rx_payload.data, PACKET_HEADER_SIZE);
+            case    DATA_PACKET  :
 
-               switch (  rx_queue[rx_tail].data[POS_PACKET_TYPE] )
-               {
+                       if ( buf_count != 0 )
+                       {
+                            if ( rx_queue[rx_tail].data[POS_DIRECTION] == BACKWORD )
+                            {
+                                /* Respone from meter */
+                                fillPacket(BACKWORD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length);
+                                rx_queue_pop();
+                            }
 
-                    case    DATA_PACKET: 
-                      
-                              if ( rx_queue[rx_tail].data[POS_DIRECTION] == BACKWORD )
-                              {
-                                  /* Respone from meter */
-                                  fillPacket(BACKWORD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length);
-                                  rx_queue_pop();
-                              }
+                            else
+                            {
+                                /* Request from DCU */
 
-                              else
-                              {
-                                  /* Request from DCU */
+                                if(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle ) + 1] != 0)
+                                {
+                                   fillPacket( FORWARD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length );
+                                   rx_queue_pop();
+                                }
+                                else
+                                {
+                                  Construct_DLMS_Packet();
 
-                                  if(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle ) + 1] != 0)
-                                  {
-                                     //check_direction(rx_queue[rx_tail].data);
-                                     //sendDataBidirectional( rx_queue[rx_tail].data[POS_DIRECTION] );  
-                                     rx_queue[rx_tail].data[POS_CIRCLE_ARRAY + Current_Circle] = addr_prefix[0];
-                                     fillPacket( FORWARD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length );
-                                     rx_queue_pop();
-                                  }
-                                  else
-                                  {
-                                    Construct_DLMS_Packet();
+                                }
+                            }
+                       }
+                       PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+            break;
 
-                                  }
-                              }
-                             
-                    break;
-
-                    case    PING_PACKET: 
-
-                               pingPacket();
-                               rx_queue_pop();
-                    break;
-
-                    case    INS_PACKET: 
-                              
-                             // check_direction(rx_payload.data);
-                              
-                              //sendDataBidirectional( rx_payload.data[POS_DIRECTION] );  
-                              rx_queue[rx_tail].data[POS_CIRCLE_ARRAY + Current_Circle] = addr_prefix[0];
-                              fillPacket( BACKWORD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length );
-                              rx_queue_pop();                            
-                              
-                    break;
-
-               }             
+            case    PING_PACKET : 
                         
+                        pingPacket();
+                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+            break;
+
+            case    INS_PACKET :
+                        
+                        rx_payload.data[ POS_CIRCLE_ARRAY + Current_Circle ] = addr_prefix[0];
+                        fillPacket( BACKWORD, rx_payload.data, rx_payload.length );
+                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+            break;
+
         }
 
         if(Diagnostic_Test == 1)
@@ -1336,7 +1340,7 @@ void main(void)
                   set_slave_adress(Prev_neighbor_table[0].node_id, arrays[Current_Circle - 1]); 
                  
                   
-          sendDataToNextSlave();
+            sendDataToNextSlave();
             rx_queue_pop(); 
 
             
@@ -1347,70 +1351,9 @@ void main(void)
           nrf_delay_us(50000); //to send the data 
           //memcpy(&rx_queue[rx_tail].data[PACKET_HEADER_SIZE+1], data_array1, rx_index);
           send_data_dcu(rx_index);
+
           Uart_rx_flag = 0;      
         }
-
-
-
-          #if 0
-
-        if( doo == 1 )
-        {
-            doo = 0;
-            checkPacketAndCnt();
-        }
-
-          
-          if(Diagnostic_Test == 1)
-          {
-              doDiagnosticTest();
-          }
-          if (testSlave == 1)
-          {
-                header.packet_type    = DATA_PACKET;
-                header.Direction      = FORWARD;
-                header.circle_array[Current_Circle]   = addr_prefix[0];
-                header.circle_array[2]  = Nxt_neighbor_table[0].node_id;
-                header.circle_array[3]  = Nxt_neighbor_table[1].node_id; 
-
-                memcpy(tx_payload.data, &header, sizeof(header));
-                memcpy(tx_payload.data + sizeof(header), "DEVSYS", 6);
-
-                set_slave_adress(Nxt_neighbor_table[0].node_id, arrays[Current_Circle + 1]);
-
-                sendDataToNextSlave();
-                testSlave = 0;
-          }
-
-          if ( checkDcu == 1 )
-          {
-
-              checkDcu = 0;
-
-              memset(&header, 0, PACKET_HEADER_SIZE);
-              memset(&ins_Packet, 0, PACKET_INS_SIZE);
-              
-              header.packet_type      =     INS_PACKET;
-              header.Direction        =     BACKWORD;
-              
-              memcpy(ins_Packet.serial_no, "01007777", sizeof(ins_Packet.serial_no));
-              ins_Packet.path[Current_Circle]     =  addr_prefix[0];
-
-              memcpy(tx_payload.data, &header, sizeof(header));
-              memcpy(tx_payload.data + sizeof(header), &ins_Packet, sizeof(ins_Packet));
-
-              tx_payload.length = ( sizeof(header) + sizeof(ins_Packet) );
-
-              set_slave_adress(DCU_PREFIX[0], DCU_BASE);
-
-              nrf_esb_stop_rx();
-
-               if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
-               {
-                  nrf_delay_us(50000);
-               }
-          }
-          #endif
 
     }
 

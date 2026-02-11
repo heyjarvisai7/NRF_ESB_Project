@@ -106,7 +106,7 @@ typedef enum
 
 typedef enum 
 {
-    DATA_PACKET,
+    DATA_PACKET = 1,
     PING_PACKET,
     INS_PACKET
 
