@@ -525,15 +525,19 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
                 NRF_LOG_DEBUG("TX FAILED EVENT");
                 NRF_LOG_FLUSH();
+
+                (void) nrf_esb_flush_tx();
+                (void) nrf_esb_start_tx();
+
                 if(tx_payload.data[POS_PACKET_TYPE] == PING_PACKET)
                 {
                    neighbour_no++;
                 }
                 else
                 {   // if rx packet is data packet
-                    //reRouting(); // need to uncomment 
+                    reRouting(); // need to uncomment 
                 }
-                //NRF_LOG_FLUSH();
+                
 
         break;
 
