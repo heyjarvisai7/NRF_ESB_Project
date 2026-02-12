@@ -96,8 +96,8 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 #define     POS_LENGTH                        POS_DIRECTION + sizeof(header.Direction) 
 #define     POS_CIRCLE_ARRAY                  POS_LENGTH + sizeof(header.length)
 #define     POS_DIRTY_FLAG                    POS_CIRCLE_ARRAY + sizeof(header.circle_array)
-#define     POS_PACKETNO                      POS_DIRTY_FLAG + sizeof(header.dirtyflag)
-#define     POS_RESERVED                      POS_PACKETNO + sizeof(header.packetNo)
+#define     POS_PACKET_NUMBER                 POS_DIRTY_FLAG + sizeof(header.dirtyflag)
+#define     POS_RESERVED                      POS_PACKET_NUMBER + sizeof(header.packet_Number)
 
 //#define     POS_SERIAL_NO                     POS_RESERVED + sizeof(header.reserved) 
 //#define     POS_PATH                          POS_SERIAL_NO + sizeof(ins_Packet.serial_no)
@@ -164,7 +164,7 @@ typedef struct __attribute__((packed)) Packet_Header
       uint16_t length;
       uint8_t circle_array[MAX_CIRCLE];
       uint8_t dirtyflag;
-      uint8_t packetNo;
+      uint8_t packet_Number;
       uint8_t reserved;
 }PACKET_HEADER;
 
@@ -1047,7 +1047,7 @@ void send_data_dcu(uint16_t length)
 
        NRF_LOG_INFO("first %d",length);
 
-       header.packetNo = 0;
+       header.packet_Number = 0;
 
 	while(length > 0)
 	{
@@ -1055,7 +1055,7 @@ void send_data_dcu(uint16_t length)
 		if(length > DATA_SIZE)
 		{
                         memset(sending_data , 0, MAX_TRANFERSIZE);
-                        header.packetNo++;
+                        header.packet_Number++;
                         memcpy(sending_data,&header,PACKET_HEADER_SIZE);
                         memcpy(sending_data+PACKET_HEADER_SIZE,data_array1+sent_bytes_count,DATA_SIZE);
 		        fillPacket(BACKWORD, sending_data, DATA_SIZE + PACKET_HEADER_SIZE);
@@ -1072,7 +1072,7 @@ void send_data_dcu(uint16_t length)
 		{
                        length1  = length;
                         memset(sending_data , 0, MAX_TRANFERSIZE);
-                        header.packetNo++;
+                        header.packet_Number++;
                         memcpy(sending_data,&header,PACKET_HEADER_SIZE);
                         memcpy(sending_data+PACKET_HEADER_SIZE,data_array1+sent_bytes_count,DATA_SIZE);
 			fillPacket(BACKWORD, sending_data, (length1 + PACKET_HEADER_SIZE));

@@ -76,8 +76,8 @@
 #define     POS_LENGTH                        POS_DIRECTION + sizeof(headeer.Direction) 
 #define     POS_CIRCLE_ARRAY                  POS_LENGTH + sizeof(headeer.length)
 #define     POS_DIRTY_FLAG                    POS_CIRCLE_ARRAY + sizeof(headeer.circle_array)
-#define     POS_PACKETNO                      POS_DIRTY_FLAG + sizeof(headeer.dirtyflag)
-#define     POS_RESERVED                      POS_PACKETNO + sizeof(headeer.packetNo)
+#define     POS_PACKET_NUMBER                 POS_DIRTY_FLAG + sizeof(headeer.dirtyflag)
+#define     POS_RESERVED                      POS_PACKET_NUMBER + sizeof(headeer.packetNo)
 
 #define     POS_DATA                          PACKET_HEADER_SIZE
 
@@ -131,7 +131,7 @@ typedef struct __attribute__((packed)) Packet_Header
       uint16_t length;
       uint8_t circle_array[MAX_CIRCLE];
       uint8_t dirtyflag;
-      uint8_t packetNo;
+      uint8_t packet_Number;
       uint8_t reserved;
 
 }PACKET_HEADER;
@@ -205,8 +205,8 @@ volatile uint8_t rx_tail    =   0;
 volatile uint8_t buf_count  =   0;
 
 uint8_t serverBuffer[SERVER_BUFFER_SIZE];
-uint8_t totalLength = 0;
-uint8_t NEXT_BYTES = 0; 
+uint8_t totalLength         =   0;
+uint8_t NEXT_BYTES          =   0; 
 
 
 void storePath( void )
@@ -263,6 +263,27 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address)
     return err_code;
 }
 
+
+void constructSERVERpacket( void )
+{
+     if ( rx_queue[rx_tail].data[POS_PACKET_NUMBER] == 1 )
+     {
+        totalLength = rx_queue[rx_tail].length;
+     }
+
+     if ( totalLength > MAX_LENGTH )
+     {
+          memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], MAX_LENGTH );
+          totalLength -= MAX_LENGTH;
+          NEXT_BYTES  += MAX_LENGTH;  
+     }
+
+     else
+     {
+           memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], totalLength );
+           totalLength = NEXT_BYTES = 0;
+     }
+}
   
 
 
@@ -287,25 +308,7 @@ void sendDataBidirectional(uint8_t direction)
            NRF_LOG_INFO("Sending to server...");
            NRF_LOG_FLUSH();
 
-           if ( rx_queue[rx_tail].data[POS_PACKETNO] == 1 )
-           {
-              totalLength = rx_queue[rx_tail].length;
-           }
-
-           if ( totalLength > MAX_LENGTH )
-           {
-                memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], MAX_LENGTH );
-                totalLength -= MAX_LENGTH;
-                NEXT_BYTES  += MAX_LENGTH;  
-           }
-
-           else
-           {
-                 memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], totalLength );
-                 totalLength = NEXT_BYTES = 0;
-           }
-
-           
+           constructSERVERpacket();          
     }
 }
 
