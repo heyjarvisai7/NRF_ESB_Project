@@ -68,7 +68,7 @@
 #define     PACKET_INS_SIZE                   sizeof(PACKET_INS)
 
 #define     POS_HEADER                        0
-#define     POS_INS_PACKET                     PACKET_HEADER_SIZE
+#define     POS_INS_PACKET                    PACKET_HEADER_SIZE
 
 
 #define     POS_PACKET_TYPE                   0
@@ -76,8 +76,10 @@
 #define     POS_LENGTH                        POS_DIRECTION + sizeof(headeer.Direction) 
 #define     POS_CIRCLE_ARRAY                  POS_LENGTH + sizeof(headeer.length)
 #define     POS_DIRTY_FLAG                    POS_CIRCLE_ARRAY + sizeof(headeer.circle_array)
-#define     POS_PACKETNO                      POS_DIRTY_FLAG + sizeof(header.dirtyflag)
-#define     POS_RESERVED                      POS_PACKETNO + sizeof(header.packetNo)
+#define     POS_PACKETNO                      POS_DIRTY_FLAG + sizeof(headeer.dirtyflag)
+#define     POS_RESERVED                      POS_PACKETNO + sizeof(headeer.packetNo)
+
+#define     POS_DATA                          PACKET_HEADER_SIZE
 
 #define     POS_SERIAL_NO                     POS_RESERVED + sizeof(headeer.reserved) 
 #define     POS_PATH                          POS_SERIAL_NO + sizeof(ins_Packet.serial_no)
@@ -92,6 +94,9 @@
 
 #define     RX_QUEUE_SIZE                     7
 #define     APP_BUF_SIZE                      500 
+
+#define     MAX_LENGTH                        ( NRF_ESB_MAX_PAYLOAD_LENGTH - PACKET_HEADER_SIZE )
+#define     SERVER_BUFFER_SIZE                1024
 
 
 /*
@@ -156,6 +161,8 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address);
 uint8_t matchSerialNo(uint8_t index, uint8_t *seralNo);
 void storePath( void );
 void sendDataToNextSlave(void);
+bool rx_queue_push(uint8_t *in_data, uint16_t in_len);
+bool rx_queue_pop(void);
 
 
 
@@ -196,6 +203,10 @@ volatile rx_packet_t rx_queue[RX_QUEUE_SIZE];
 volatile uint8_t rx_head    =   0;
 volatile uint8_t rx_tail    =   0;
 volatile uint8_t buf_count  =   0;
+
+uint8_t serverBuffer[SERVER_BUFFER_SIZE];
+uint8_t totalLength = 0;
+uint8_t NEXT_BYTES = 0; 
 
 
 void storePath( void )
@@ -252,12 +263,16 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address)
     return err_code;
 }
 
+  
+
+
+
 void sendDataBidirectional(uint8_t direction)
 {
     if ( direction == FORWARD )
     {
           /*
-           * Send to NODES
+           * Send to NODES (using at other place)
            */
         nrf_delay_us(50000); //to send the data 
         set_slave_adress(PATH_ARRAY[0].path[0], Nxt_Circle_Base_Addr);
@@ -271,8 +286,30 @@ void sendDataBidirectional(uint8_t direction)
 
            NRF_LOG_INFO("Sending to server...");
            NRF_LOG_FLUSH();
+
+           if ( rx_queue[rx_tail].data[POS_PACKETNO] == 1 )
+           {
+              totalLength = rx_queue[rx_tail].length;
+           }
+
+           if ( totalLength > MAX_LENGTH )
+           {
+                memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], MAX_LENGTH );
+                totalLength -= MAX_LENGTH;
+                NEXT_BYTES  += MAX_LENGTH;  
+           }
+
+           else
+           {
+                 memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], totalLength );
+                 totalLength = NEXT_BYTES = 0;
+           }
+
+           
     }
 }
+
+
 
 void sendDataToNextSlave(void)
 {
@@ -495,10 +532,11 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                 case    DATA_PACKET :
                                     
                                             PACKET   =    DATA_PACKET;   
-                                            rx_queue_push(rx_payload.data, rx_payload.length);
+                                            rx_queue_push(rx_payload.data, rx_payload.length );
                                 break;
                            } 
-                           NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);                     
+                           NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
+                           NRF_LOG_INFO("rx_queue[rx_tail].length : %d",rx_queue[rx_tail].length);                     
                       }  
 
                 break;

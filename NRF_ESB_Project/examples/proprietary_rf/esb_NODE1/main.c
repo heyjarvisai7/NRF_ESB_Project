@@ -1203,15 +1203,14 @@ void send_data_dcu(uint16_t length)
                         memcpy(sending_data,&header,PACKET_HEADER_SIZE);
                         memcpy(sending_data+PACKET_HEADER_SIZE,data_array1+sent_bytes_count,DATA_SIZE);
 
-                     
-
 		        fillPacket(BACKWORD, sending_data, DATA_SIZE + PACKET_HEADER_SIZE);
                         for(int i =sent_bytes_count;i<= DATA_SIZE;i++)
                         {
                           NRF_LOG_RAW_INFO(" %x",data_array1[i]);
                         }
-			sent_bytes_count += DATA_SIZE;
-			length -= DATA_SIZE;
+
+			sent_bytes_count  += DATA_SIZE;
+			length            -= DATA_SIZE;
 
 
 		}
