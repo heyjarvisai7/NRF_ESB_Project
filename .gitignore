@@ -1,0 +1,15 @@
+Debug/
+Release/
+.build/
+*.o
+*.d
+*.elf
+*.map
+*.hex
+*.bin
+*.axf
+.settings/
+.vscode/
+*.rar
+*.zip
+*.7z
