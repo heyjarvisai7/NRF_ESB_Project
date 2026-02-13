@@ -90,6 +90,7 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 #define     MAX_CIRCLE                        4
 #define     MAX_NEIGHBORS                     10
 #define     MIN_CIRCLE                        0
+#define     NOT_DEFINED                       0
 
 #define     POS_PACKET_TYPE                   0
 #define     POS_DIRECTION                     sizeof(header.packet_type)
@@ -118,14 +119,22 @@ typedef enum
     PING_PACKET,
     INS_PACKET
 
-}DATA_TYPE;
+}data_type;
 
 typedef enum 
 {    
     BACKWORD,
     FORWARD
 
-}DIRECTION;
+}direction;
+
+typedef enum
+{
+    TX_SUCCESS = 1,
+    TX_FAILED,
+    RX_SUCCESS
+
+}rf_event;
 
 
 
@@ -232,14 +241,13 @@ uint8_t Current_Circle = 1;
 uint8_t volatile Send_Data_To_Nxt_Slave = 0;
 
 uint8_t uartbuff[2048];
-uint8_t Ack_Txing = 0;
+
 uint8_t Actd[15];
 uint8_t *circlearr;
 uint8_t Nxt_table_index;
 uint8_t Prev_table_index;
 uint8_t neighbour_no;
 
-uint8_t RX_SUCESS_FLAG = 0;
 uint8_t testSlave, doo, sendINS = 0; 
 
 uint8_t circlearr1[500];
@@ -247,7 +255,7 @@ uint8_t circlearr1[500];
 neighbor_t *Nxt_neighbor = &Nxt_neighbor_table[0];
 neighbor_t *Prev_neighbor = &Prev_neighbor_table[0];
 
-
+uint8_t RF_EVENT = NOT_DEFINED;
 
 
 void sort_neighbors_by_rssi(neighbor_t *table, int n)
@@ -519,7 +527,8 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
                 NRF_LOG_DEBUG("TX SUCCESS EVENT");
                 NRF_LOG_FLUSH();
-                Ack_Txing = 1;
+               
+                RF_EVENT = TX_SUCCESS;
                 NRF_LOG_FLUSH();
 
         break;
@@ -528,6 +537,7 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
                 NRF_LOG_DEBUG("TX FAILED EVENT");
                 NRF_LOG_FLUSH();
+                RF_EVENT = TX_FAILED;
                 if(tx_payload.data[POS_PACKET_TYPE] == PING_PACKET)
                 {
                    neighbour_no++;
@@ -544,28 +554,27 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
                     if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                     {
-                       
-
-                       /*Need to store in comming packets*/
-                       RX_SUCESS_FLAG = 1;
-                       
-                     
+                      
+                      /*Need to store in comming packets*/
+                
+                       RF_EVENT= RX_SUCCESS;
+                                            
                        switch ( rx_payload.data[POS_PACKET_TYPE] )
                        {
                             case    PING_PACKET :
                                     
-                                        PACKET   =   PING_PACKET;
+                                                    PACKET   =   PING_PACKET;
                             break;
 
                             case    INS_PACKET  :
                                     
-                                        PACKET   =   INS_PACKET;
+                                                    PACKET   =   INS_PACKET;
                             break;
 
                             case    DATA_PACKET :
                                   
-                                        PACKET   =    DATA_PACKET;   
-                                        rx_queue_push(rx_payload.data, rx_payload.length);
+                                                    PACKET   =    DATA_PACKET;   
+                                                    rx_queue_push(rx_payload.data, rx_payload.length);
                             break;
                        }
                        NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
@@ -779,7 +788,7 @@ void pingPacket(void)
                       Prev_table_index++;
                 }
                 neighbour_no++;
-                Ack_Txing = 0;
+                
 
           }
           //if(rx_queue[rx_tail].data[POS_PACKET_TYPE] == PING_PACKET  && rx_queue[rx_tail].data[POS_LENGTH] == 1)
@@ -801,8 +810,28 @@ void pingPacket(void)
                 memcpy(tx_payload.data,&header,sizeof(header));
                 memcpy(tx_payload.data + sizeof(header), &advertisment_pcket, sizeof(advertisment_pcket));
                 tx_payload.length = sizeof(header) + sizeof(advertisment_pcket);
-                check_direction(tx_payload.data);
-                sendDataBidirectional( tx_payload.data[POS_DIRECTION] );
+                //check_direction(tx_payload.data);
+                //sendDataBidirectional( tx_payload.data[POS_DIRECTION] );
+                nrf_delay_us(50000);
+                nrf_esb_stop_rx();
+
+                if ( tx_payload.data[POS_DIRECTION] == FORWARD )
+                {
+                    set_slave_adress(rx_payload.data[POS_CIRCLE_ARRAY + (Current_Circle + 1)], arrays[Current_Circle + 1]);
+                }
+                else
+                {
+                    if ( Current_Circle == 0 )
+                    {
+                        set_slave_adress(DCU_PREFIX[0], DCU_BASE);
+                    }
+                    else 
+                    {
+                        set_slave_adress(rx_payload.data[POS_CIRCLE_ARRAY + (Current_Circle - 1)], arrays[Current_Circle - 1]);
+                    }                    
+                }
+
+                sendDataToNextSlave();
           }
 }
 
@@ -883,136 +912,84 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address)
     nrf_esb_flush_tx();
     nrf_esb_flush_rx();
 
-
     return err_code;
 }
 
 
 
 uint8_t Diagnostic_Test = 0;
-#define SCAN_PREV   (1 << 0)
-#define SCAN_NEXT   (1 << 1)
+
+static void pingNodes( uint8_t circle )
+{
+    uint8_t done_rx_start = 0;
+
+    for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
+    {
+          if ( RF_EVENT == NOT_DEFINED || RF_EVENT == TX_FAILED )
+          {
+                nrf_esb_stop_rx();
+                //nrf_delay_ms(500);
+                set_slave_adress( neighbour_no ,arrays[circle]);
+                memset(&header,0,sizeof(header));
+                header.packet_type = PING_PACKET;
+                header.length = 1;
+                header.circle_array[Current_Circle] = addr_prefix[0];
+                memcpy(tx_payload.data,&header,sizeof(header));
+                memcpy(tx_payload.data + sizeof(header),"HAI",sizeof("HAI"));
+                tx_payload.length = (sizeof(header) + sizeof("HAI"));
+                done_rx_start = 1;
+                if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
+                {
+                      nrf_delay_us(50000); 
+                }
+          }
+          if(done_rx_start == 1 && RF_EVENT == TX_SUCCESS)
+          {
+                done_rx_start = 0;
+                nrf_esb_flush_tx();
+                nrf_esb_flush_rx();
+                set_slave_adress(addr_prefix[0], arrays[Current_Circle]); 
+                nrf_esb_start_rx();
+          }
+          if ( RF_EVENT == RX_SUCCESS )
+          {                                
+              nrf_delay_ms(500);
+              pingPacket();
+              RF_EVENT = NOT_DEFINED;
+          }
+    }
+} 
 
 
 void doDiagnosticTest(void)
 {       
       Nxt_table_index = 0;
       Prev_table_index = 0;
-      uint8_t done_rx_start = 0;
-      uint8_t scan_dir = 0;
-
     
       if (Current_Circle == MIN_CIRCLE)
       {
-          scan_dir = SCAN_NEXT;
+          pingNodes( Current_Circle + 1 );
+          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+          Diagnostic_Test = 0;
       }
       else if (Current_Circle == MAX_CIRCLE)
       {
-          scan_dir = SCAN_PREV;
+          pingNodes( Current_Circle - 1 );
+          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1);
+          Diagnostic_Test = 0;
       }
       else
       {
-          scan_dir = ( SCAN_PREV | SCAN_NEXT );
-      }
+          pingNodes( Current_Circle - 1 );
+          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1);         
 
-      
-      if (( scan_dir & SCAN_PREV ) == 1 )
-      {
-
-            for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
-            {
-                  if(Ack_Txing == 0)
-                  {
-                        nrf_esb_stop_rx();
-                        //nrf_delay_ms(500);
-                        set_slave_adress( neighbour_no ,arrays[Current_Circle - 1]);
-                        memset(&header,0,sizeof(header));
-                        header.packet_type = PING_PACKET;
-                        header.length = 1;
-                        header.circle_array[Current_Circle] = addr_prefix[0];
-                        memcpy(tx_payload.data,&header,sizeof(header));
-                        memcpy(tx_payload.data + sizeof(header),"HAI",sizeof("HAI"));
-                        tx_payload.length = (sizeof(header) + sizeof("HAI"));
-                        done_rx_start = 1;
-                        if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
-                        {
-                              nrf_delay_us(50000); //to send the data 
-                              //  set_slave_adress(addr_prefix[0],arrays[Current_Circle]);
-                              //   nrf_esb_start_rx();
-                        }
-                  }
-                  if(done_rx_start == 1 && Ack_Txing == 1)
-                  {
-                        done_rx_start = 0;
-                        nrf_esb_flush_tx();
-                        nrf_esb_flush_rx();
-                        set_slave_adress(addr_prefix[0], arrays[Current_Circle]); 
-                        nrf_esb_start_rx();
-
-                  }
-                  if ( RX_SUCESS_FLAG == 1 )
-                  {
-                      RX_SUCESS_FLAG = 0;
-                      nrf_delay_ms(500);
-                      pingPacket();
-                  }
-
-            }
-            sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1);
-            Diagnostic_Test = 0;
-      }
-
-      if (( scan_dir & SCAN_NEXT ) == 1  )
-      {
-
-            for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
-            {
-
-                if(Ack_Txing == 0)
-                {
-                      nrf_esb_stop_rx();
-                      //nrf_delay_ms(500);
-                      set_slave_adress( neighbour_no ,arrays[Current_Circle + 1]);
-                      memset(&header,0,sizeof(header));
-                      header.packet_type = 1;
-                      header.length = 1;
-                      header.circle_array[Current_Circle] = addr_prefix[0];
-                      memcpy(tx_payload.data,&header,sizeof(header));
-                      memcpy(tx_payload.data + sizeof(header),"HAI",sizeof("HAI"));
-                      tx_payload.length = (sizeof(header) + sizeof("HAI"));
-                      done_rx_start = 1;
-                      if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
-                      {
-                            nrf_delay_us(5000); //to send the data 
-                            //  set_slave_adress(addr_prefix[0],arrays[Current_Circle]);
-
-                      }
-                }
-                if(done_rx_start == 1 && Ack_Txing == 1)
-                {
-                      done_rx_start = 0;
-                      nrf_esb_flush_tx();
-                      nrf_esb_flush_rx();
-                      set_slave_adress(addr_prefix[0], arrays[Current_Circle]); 
-                      nrf_esb_start_rx();
-
-                }
-                if ( RX_SUCESS_FLAG == 1 )
-                {
-                      RX_SUCESS_FLAG = 0;
-                      pingPacket();
-                }
-
-            }
-            sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
-            Diagnostic_Test = 0;
-
+          pingNodes( Current_Circle + 1 );
+          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+          Diagnostic_Test = 0;
       }
 
       Nxt_neighbor  = &Nxt_neighbor_table[0];
       Prev_neighbor = &Prev_neighbor_table[0];
-
-     // sendINS = 1;
 }
 
 
@@ -1024,6 +1001,7 @@ void sendDataBidirectional(uint8_t direction)
               Fwrd_Dirct = 0;
               nrf_delay_us(50000);
               nrf_esb_stop_rx();
+              #if 0
               if( header.packet_type == DATA_PACKET || header.packet_type == INS_PACKET )
               {
                   
@@ -1032,6 +1010,7 @@ void sendDataBidirectional(uint8_t direction)
                   tx_payload.length  = rx_queue[rx_tail].length;
 
               }
+              #endif
               tx_payload.noack = false;
               
               set_slave_adress(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) + 1],arrays[Current_Circle + 1]);

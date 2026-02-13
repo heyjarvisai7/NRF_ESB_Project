@@ -2,10 +2,11 @@
 <session>
  <Bookmarks/>
  <Breakpoints groups="Breakpoints" active_group="Breakpoints">
-  <BreakpointListItem trigger="" line="107" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="3" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="288" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="355" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="361" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="109" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="3" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="297" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="364" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="370" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="797" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="2" filename="../../../main.c" useHWbreakpoint="false"/>
   <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
  </Breakpoints>
  <ExecutionProfileWindow/>
@@ -28,6 +29,7 @@
   <ProjectSessionItem path="esb_prx_pca10040"/>
   <ProjectSessionItem path="esb_prx_pca10040;esb_prx_pca10040"/>
   <ProjectSessionItem path="esb_prx_pca10040;esb_prx_pca10040;Application"/>
+  <ProjectSessionItem path="esb_prx_pca10040;esb_prx_pca10040;Board Definition"/>
   <ProjectSessionItem path="esb_prx_pca10040;esb_prx_pca10040;None"/>
   <ProjectSessionItem path="esb_prx_pca10040;esb_prx_pca10040;nRF_Libraries"/>
   <ProjectSessionItem path="esb_prx_pca10040;esb_prx_pca10040;nRF_Log"/>
@@ -66,8 +68,10 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="6" y="512" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="539" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="35" y="959" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="1005" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1126" useTextEdit="1" path="../../../../../../components/proprietary_rf/esb/nrf_esb.c" left="0" top="1113" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1126" useTextEdit="1" path="../../../../../../../../NRF_ESB_Project/NRF_ESB_Project-main/NRF_ESB_Project/components/proprietary_rf/esb/nrf_esb.c" left="0" top="1108" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="5" y="208" useTextEdit="1" path="../../../../../../components/boards/boards.c" left="0" top="183" codecName="Default"/>
  </Files>
  <EMStudioWindow activeProject="esb_prx_pca10040" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>
