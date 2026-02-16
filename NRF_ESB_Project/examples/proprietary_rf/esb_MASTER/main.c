@@ -116,7 +116,8 @@ typedef enum
 {
     DATA_PACKET = 1,
     PING_PACKET,
-    INS_PACKET
+    INS_PACKET,
+    PUSH_PACKET
 
 }DATA_TYPE;
 
@@ -315,6 +316,7 @@ void construct_SERVER_packet( void )
      if ( rx_queue[rx_tail].data[POS_PACKET_NUMBER] == 1 )
      {
         totalLength = rx_queue[rx_tail].length;
+        memset(serverBuffer, 0 , SERVER_BUFFER_SIZE );
      }
 
      if ( totalLength > MAX_LENGTH )
@@ -659,6 +661,12 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                                                               PACKET   =    DATA_PACKET;   
                                                                               rx_queue_push(rx_payload.data, rx_payload.length );
                                                         break;
+
+                                                        case    PUSH_PACKET :
+                                                                              PACKET   =    PUSH_PACKET;
+                                                                              rx_queue_push(rx_payload.data, rx_payload.length);
+                                                        break;
+
                                                    } 
 
                                                    #ifdef DAMU
@@ -758,12 +766,12 @@ int main(void)
                 NRF_LOG_FLUSH();
 
                 case      DATA_PACKET: 
-                            if ( buf_count != 0 )
-                            {
-                                  sendDataBidirectional( BACKWORD );
-                                  rx_queue_pop();
-                                  PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
-                            }
+                                        if ( buf_count != 0 )
+                                        {
+                                              sendDataBidirectional( rx_queue[rx_tail].data[POS_DIRECTION] );
+                                              rx_queue_pop();
+                                              PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+                                        }
                 break;
 
                 case      PING_PACKET: // do whatever
@@ -771,11 +779,15 @@ int main(void)
                 break;
 
                 case      INS_PACKET: 
+                                      storePath();
+                                      insDone = 1;
+                                      PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+                break;
 
-                            storePath();
-                            rx_queue_pop();
-                            insDone = 1;
-                            PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+                case      PUSH_PACKET :
+                                        sendDataBidirectional( rx_queue[rx_tail].data[POS_DIRECTION] );
+                                        rx_queue_pop();
+                                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
                 break;
 
            }

@@ -68,7 +68,7 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="35" y="959" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="1005" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1198" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="1197" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1126" useTextEdit="1" path="../../../../../../components/proprietary_rf/esb/nrf_esb.c" left="0" top="1113" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1126" useTextEdit="1" path="../../../../../../../../NRF_ESB_Project/NRF_ESB_Project-main/NRF_ESB_Project/components/proprietary_rf/esb/nrf_esb.c" left="0" top="1108" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="5" y="208" useTextEdit="1" path="../../../../../../components/boards/boards.c" left="0" top="183" codecName="Default"/>

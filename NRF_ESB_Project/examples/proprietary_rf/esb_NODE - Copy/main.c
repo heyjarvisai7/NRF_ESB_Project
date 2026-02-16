@@ -215,7 +215,7 @@ uint8_t arrays[MAX_CIRCLE][ARRRAY_SIZE] =
 
 uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
 uint8_t base_addr_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
-uint8_t addr_prefix[8] = {0x20};
+uint8_t addr_prefix[8] = {0x30};
 
 uint8_t DCU_BASE[4] = { 0xDC, 0xDC, 0xDC, 0xDC };
 
@@ -242,7 +242,7 @@ uint8_t i = 0;
 uint8_t sent_bytes_count = 0;
 nrf_esb_payload_t rx_payload;
 uint8_t Circle_No = 0;
-uint8_t Current_Circle = 1;
+uint8_t Current_Circle = 2;
 uint8_t volatile Send_Data_To_Nxt_Slave = 0;
 
 uint8_t uartbuff[2048];
@@ -795,13 +795,13 @@ void doDiagnosticTest(void)
       {
           pingNodes( Current_Circle + 1 );
           sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
-         
+          Diagnostic_Test = 0;
       }
       else if (Current_Circle == MAX_CIRCLE)
       {
           pingNodes( Current_Circle - 1 );
           sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1);
-          
+          Diagnostic_Test = 0;
       }
       else
       {
@@ -810,10 +810,9 @@ void doDiagnosticTest(void)
 
           pingNodes( Current_Circle + 1 );
           sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
-          
+          Diagnostic_Test = 0;
       }
 
-      Diagnostic_Test = 0;
       Nxt_neighbor  = &Nxt_neighbor_table[0];
       Prev_neighbor = &Prev_neighbor_table[0];
 
@@ -821,8 +820,6 @@ void doDiagnosticTest(void)
       nrf_esb_flush_rx();
       set_slave_adress(addr_prefix[0], arrays[Current_Circle]); 
       nrf_esb_start_rx();
-
-
 }
 
 void sendDataBidirectional(uint8_t direction)
@@ -1097,6 +1094,7 @@ void main(void)
 
         switch ( PACKET )
         {
+
             case    DATA_PACKET  :
                                    if ( buf_count != 0 )
                                    {
@@ -1107,7 +1105,7 @@ void main(void)
                                              * Requested response comming from another NODE
                                              */
 
-                                            fillPacket( rx_queue[rx_tail].data[POS_DIRECTION], (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length);
+                                            fillPacket(BACKWORD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length);
                                             rx_queue_pop();
                                         }
 
@@ -1121,7 +1119,7 @@ void main(void)
 
                                             if(rx_queue[rx_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle ) + 1] != 0)
                                             {
-                                               fillPacket( rx_queue[rx_tail].data[POS_DIRECTION], (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length );
+                                               fillPacket( FORWARD, (void *)rx_queue[rx_tail].data, rx_queue[rx_tail].length );
                                                rx_queue_pop();
                                             }
                                             else
@@ -1144,13 +1142,13 @@ void main(void)
 
             case    INS_PACKET :
                                   rx_payload.data[ POS_CIRCLE_ARRAY + Current_Circle ] = addr_prefix[0];
-                                  fillPacket( rx_payload.data[POS_DIRECTION], rx_payload.data, rx_payload.length );
+                                  fillPacket( BACKWORD, rx_payload.data, rx_payload.length );
                                   PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
             break;
 
             case    PUSH_PACKET :
                                   rx_payload.data[ POS_CIRCLE_ARRAY + Current_Circle ] = addr_prefix[0];
-                                  fillPacket( rx_queue[rx_tail].data[POS_DIRECTION], rx_payload.data, rx_payload.length );
+                                  fillPacket( BACKWORD, rx_payload.data, rx_payload.length );
                                   rx_queue_pop();
                                   PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
             break;
@@ -1204,8 +1202,8 @@ void main(void)
         if ( pushTimeOut == 0 )
         {
 
-            memcpy(uartbuff, open_request1, 9 );
-            Construct_DLMS_Packet();
+            memcpy( data_array1, open_request1, 9 );
+           
             nrf_delay_us(50000);
             memset( &header, 0, PACKET_HEADER_SIZE );
 
@@ -1214,9 +1212,11 @@ void main(void)
             header.length                         = uart_rx_index;
             header.circle_array[Current_Circle]   = addr_prefix[0];
 
+            send_data_to_dcu(9);
+            uart_rx_index = 0;
+            Uart_rx_flag = 0;
+            pushTimeOut = 1;
         }
-
-
 
     }
   

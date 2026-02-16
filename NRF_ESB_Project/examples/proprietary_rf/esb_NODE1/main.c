@@ -788,8 +788,6 @@ void pingPacket(void)
                       Prev_table_index++;
                 }
                 neighbour_no++;
-                
-
           }
           //if(rx_queue[rx_tail].data[POS_PACKET_TYPE] == PING_PACKET  && rx_queue[rx_tail].data[POS_LENGTH] == 1)
           if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 1 )
@@ -850,21 +848,6 @@ void gpio_init( void )
     bsp_board_init(BSP_INIT_LEDS);
 }
 
-void nrf_set_txmode(void)
-{
-    uint32_t err_code;
-     nrf_esb_config_t nrf_esb_config        = NRF_ESB_DEFAULT_CONFIG;
-    nrf_esb_config.payload_length           = 8;
-    nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
-    nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_2MBPS;
-    nrf_esb_config.mode                     = NRF_ESB_MODE_PTX;
-    nrf_esb_config.event_handler            = nrf_esb_event_handler;
-    nrf_esb_config.selective_auto_ack       = false;
-
-    err_code = nrf_esb_init(&nrf_esb_config);
-    //VERIFY_SUCCESS(err_code);
-}
-
 
 uint32_t esb_init( void )
 {
@@ -910,9 +893,9 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address)
     err_code = nrf_esb_set_prefixes(&slaveid, 1);
     VERIFY_SUCCESS(err_code);
     nrf_esb_flush_tx();
-    nrf_esb_flush_rx();
+    nrf_esb_flush_rx();	    
 
-    return err_code;
+	return err_code;
 }
 
 
