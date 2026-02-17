@@ -142,6 +142,22 @@ typedef enum
 
 }rf_event;
 
+typedef enum
+{
+    STORE_NODE_INFO,
+    SEND_RESPONSE_FOR_PING
+    
+}mode;
+
+typedef enum
+{
+    CIRCLE_0,
+    CIRCLE_1,
+    CIRCLE_2,
+    CIRCLE_3
+    
+} circle_no;
+
 
 
 
@@ -612,7 +628,7 @@ void reRouting(void)
 void pingPacket(void)
 {
       
-          if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 0 )
+          if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == STORE_NODE_INFO )
           {
                 memcpy(&advertisment_pcket,rx_payload.data + sizeof(header), sizeof(advertisment_pcket));
                 if(rx_payload.rssi > 0 && Nxt_table_index < MAX_NEIGHBORS && advertisment_pcket.circle_no == Current_Circle +1)
@@ -630,12 +646,13 @@ void pingPacket(void)
                 neighbour_no++;
           }
           
-          if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 1 )
+          if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == SEND_RESPONSE_FOR_PING )
           {
                 advertisment_pcket.circle_no = Current_Circle;
                 advertisment_pcket.node_id = addr_prefix[0];
                 memset(&header,0,sizeof(header));
                 header.packet_type = PING_PACKET;
+                header.length = STORE_NODE_INFO;
                 
                 if(rx_payload.data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && (POS_CIRCLE_ARRAY+ Current_Circle) != 0) 
                 {
@@ -647,7 +664,7 @@ void pingPacket(void)
                 }
                 memcpy(tx_payload.data,&header,sizeof(header));
                 memcpy(tx_payload.data + sizeof(header), &advertisment_pcket, sizeof(advertisment_pcket));
-                tx_payload.length = sizeof(header) + sizeof(advertisment_pcket);
+                tx_payload.length = ( sizeof(header) + sizeof( advertisment_pcket ));
                 //check_direction(tx_payload.data);
                 //sendDataBidirectional( tx_payload.data[POS_DIRECTION] );
 
@@ -661,7 +678,7 @@ void pingPacket(void)
                 }
                 else
                 {
-                    if ( Current_Circle == 0 )
+                    if ( Current_Circle == CIRCLE_0 )
                     {
                         set_slave_adress(DCU_PREFIX[0], DCU_BASE);
                     }
@@ -757,7 +774,7 @@ static void pingNodes( uint8_t circle )
                 set_slave_adress( neighbour_no ,arrays[circle]);
                 memset(&header,0,sizeof(header));
                 header.packet_type = PING_PACKET;
-                header.length = 1;
+                header.length = SEND_RESPONSE_FOR_PING;
                 header.circle_array[Current_Circle] = addr_prefix[0];
                 memcpy(tx_payload.data,&header,sizeof(header));
                 memcpy(tx_payload.data + sizeof(header),"HAI",sizeof("HAI"));
@@ -866,7 +883,7 @@ void sendDataBidirectional(uint8_t direction)
                   tx_payload.data[POS_CIRCLE_ARRAY + Current_Circle] = addr_prefix[0];
                   tx_payload.length  = rx_queue[rx_tail].length;
 
-                  if (Current_Circle == 0)    
+                  if (Current_Circle == CIRCLE_0)    
                   {
                       // send the response to DCU s
                       set_slave_adress(DCU_PREFIX[0], DCU_BASE); // sending to DCU
@@ -915,7 +932,7 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
           tx_payload.data[POS_CIRCLE_ARRAY +Current_Circle] = addr_prefix[0];
           tx_payload.length = length;
           
-          if(Current_Circle == 0)
+          if(Current_Circle == CIRCLE_0)
           {
               set_slave_adress(DCU_PREFIX[0], DCU_BASE);
           }
@@ -960,25 +977,28 @@ void sendDataToNextSlave(void)
 
 void uart_event_handle(app_uart_evt_t * p_event)
 {
-    uint32_t       err_code;
+    uint32_t err_code;
 
     switch ( p_event->evt_type )
     {
 
-        case APP_UART_DATA:
-                          UNUSED_VARIABLE(app_uart_get(&data_array1[uart_rx_index]));
-                          Uart_rx_flag = 1;
-                          //memcpy(&rx_queue[rx_tail].data[PACKET_HEADER_SIZE+1], data_array1, size_t n)
-                          uart_rx_index++;
+        case    APP_UART_DATA :
+                                UNUSED_VARIABLE(app_uart_get(&data_array1[uart_rx_index]));
+                                Uart_rx_flag = 1;
+                                //memcpy(&rx_queue[rx_tail].data[PACKET_HEADER_SIZE+1], data_array1, size_t n)
+                                uart_rx_index++;
         break;
 
-        case APP_UART_COMMUNICATION_ERROR:
-                                            APP_ERROR_HANDLER(p_event->data.error_communication);
+
+        case    APP_UART_COMMUNICATION_ERROR :
+                                               APP_ERROR_HANDLER(p_event->data.error_communication);
         break;
 
-        case APP_UART_FIFO_ERROR:
-                                  APP_ERROR_HANDLER(p_event->data.error_code);
+
+        case    APP_UART_FIFO_ERROR :
+                                      APP_ERROR_HANDLER(p_event->data.error_code);
         break;
+
             
         default:
             break;
@@ -987,31 +1007,32 @@ void uart_event_handle(app_uart_evt_t * p_event)
 
 static void uart_init(void)
 {
-    uint32_t                     err_code;
+    uint32_t err_code;
+
     app_uart_comm_params_t const comm_params =
     {
-        .rx_pin_no    = RX_PIN_NUMBER,
-        .tx_pin_no    = TX_PIN_NUMBER,
-        .rts_pin_no   = RTS_PIN_NUMBER,
-        .cts_pin_no   = CTS_PIN_NUMBER,
-        .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-        .use_parity   = false,
-#if defined (UART_PRESENT)
-        .baud_rate    = NRF_UARTE_BAUDRATE_9600
-#else
-        .baud_rate    = NRF_UARTE_BAUDRATE_9600
-#endif
+                                                .rx_pin_no    = RX_PIN_NUMBER,
+                                                .tx_pin_no    = TX_PIN_NUMBER,
+                                                .rts_pin_no   = RTS_PIN_NUMBER,
+                                                .cts_pin_no   = CTS_PIN_NUMBER,
+                                                .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+                                                .use_parity   = false,
+                                        #if defined (UART_PRESENT)
+                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                                        #else
+                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                                        #endif
     };
 
 
-    APP_UART_FIFO_INIT(&comm_params,
-                       UART_RX_BUF_SIZE,
-                       UART_TX_BUF_SIZE,
-                       uart_event_handle,
-                       APP_IRQ_PRIORITY_LOWEST,
-                       err_code);
-    APP_ERROR_CHECK(err_code);
+      APP_UART_FIFO_INIT(  &comm_params,
+                           UART_RX_BUF_SIZE,
+                           UART_TX_BUF_SIZE,
+                           uart_event_handle,
+                           APP_IRQ_PRIORITY_LOWEST,
+                           err_code );
 
+    APP_ERROR_CHECK(err_code);
 }
 
 
@@ -1155,7 +1176,8 @@ void main(void)
             case    INS_PACKET :      
                                   fillPacket( rx_payload.data[POS_DIRECTION], rx_payload.data, rx_payload.length );
                                   PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
-            break;
+            break; 
+
 
             case    PUSH_PACKET :
                                   fillPacket( rx_queue[rx_tail].data[POS_DIRECTION], rx_payload.data, rx_payload.length );
@@ -1189,7 +1211,7 @@ void main(void)
             tx_payload.length = ( sizeof(header) + sizeof("01005748") );
             
 
-            if ( Current_Circle == 0 )
+            if ( Current_Circle == CIRCLE_0 )
                   set_slave_adress(DCU_PREFIX[0], DCU_BASE); 
             else
                   set_slave_adress(Prev_neighbor_table[0].node_id, arrays[Current_Circle - 1]); 
@@ -1228,7 +1250,6 @@ void main(void)
             Uart_rx_flag = 0;
             pushTimeOut = 1;
         }
-
 
 
     }
