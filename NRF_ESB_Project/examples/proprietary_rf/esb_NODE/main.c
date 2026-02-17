@@ -215,7 +215,7 @@ uint8_t arrays[MAX_CIRCLE][ARRRAY_SIZE] =
 
 uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
 uint8_t base_addr_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
-uint8_t addr_prefix[8] = {0x20};
+uint8_t addr_prefix[8] = {0x10};
 
 uint8_t DCU_BASE[4] = { 0xDC, 0xDC, 0xDC, 0xDC };
 
@@ -242,7 +242,7 @@ uint8_t i = 0;
 uint8_t sent_bytes_count = 0;
 nrf_esb_payload_t rx_payload;
 uint8_t Circle_No = 0;
-uint8_t Current_Circle = 1;
+uint8_t Current_Circle = 0;
 uint8_t volatile Send_Data_To_Nxt_Slave = 0;
 
 uint8_t uartbuff[2048];
@@ -902,6 +902,7 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
       if ( direction == FORWARD )
       {
           memcpy( tx_payload.data, data, length );
+          tx_payload.data[POS_CIRCLE_ARRAY +Current_Circle] = addr_prefix[0];
           tx_payload.length = length;
  
           set_slave_adress(tx_payload.data[POS_CIRCLE_ARRAY + Current_Circle + 1], arrays[Current_Circle + 1]);
@@ -911,6 +912,7 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
       else
       {
           memcpy( tx_payload.data, data, length );
+          tx_payload.data[POS_CIRCLE_ARRAY +Current_Circle] = addr_prefix[0];
           tx_payload.length = length;
           
           if(Current_Circle == 0)
@@ -919,7 +921,15 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
           }
           else
           {
-              set_slave_adress(tx_payload.data[POS_CIRCLE_ARRAY + Current_Circle - 1], arrays[Current_Circle - 1]);
+              if ( tx_payload.data[POS_PACKET_TYPE] == PUSH_PACKET )
+              {
+                  set_slave_adress( Prev_neighbor->node_id, arrays[Current_Circle - 1] );
+              }
+              else
+              {
+                  set_slave_adress(tx_payload.data[POS_CIRCLE_ARRAY + Current_Circle - 1], arrays[Current_Circle - 1]);
+              }
+              
           }
           sendDataToNextSlave();
       }
@@ -1142,14 +1152,12 @@ void main(void)
             break;
 
 
-            case    INS_PACKET :
-                                  rx_payload.data[ POS_CIRCLE_ARRAY + Current_Circle ] = addr_prefix[0];
+            case    INS_PACKET :      
                                   fillPacket( rx_payload.data[POS_DIRECTION], rx_payload.data, rx_payload.length );
                                   PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
             break;
 
             case    PUSH_PACKET :
-                                  rx_payload.data[ POS_CIRCLE_ARRAY + Current_Circle ] = addr_prefix[0];
                                   fillPacket( rx_queue[rx_tail].data[POS_DIRECTION], rx_payload.data, rx_payload.length );
                                   rx_queue_pop();
                                   PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
@@ -1167,6 +1175,7 @@ void main(void)
         {
 
             sendINS = 0;
+            nrf_esb_stop_rx();
 
             memset(&header, 0, PACKET_HEADER_SIZE);
             
@@ -1185,7 +1194,7 @@ void main(void)
             else
                   set_slave_adress(Prev_neighbor_table[0].node_id, arrays[Current_Circle - 1]); 
 
-            rx_queue_pop(); 
+            
 
             sendDataToNextSlave();
         }
@@ -1204,8 +1213,8 @@ void main(void)
         if ( pushTimeOut == 0 )
         {
 
-            memcpy(uartbuff, open_request1, 9 );
-            Construct_DLMS_Packet();
+            memcpy( data_array1, open_request1, 9 );
+           
             nrf_delay_us(50000);
             memset( &header, 0, PACKET_HEADER_SIZE );
 
@@ -1214,6 +1223,10 @@ void main(void)
             header.length                         = uart_rx_index;
             header.circle_array[Current_Circle]   = addr_prefix[0];
 
+            send_data_to_dcu(9);
+            uart_rx_index = 0;
+            Uart_rx_flag = 0;
+            pushTimeOut = 1;
         }
 
 

@@ -765,7 +765,7 @@ int main(void)
               
                 NRF_LOG_FLUSH();
 
-                case      DATA_PACKET: 
+                case      DATA_PACKET : 
                                         if ( buf_count != 0 )
                                         {
                                               sendDataBidirectional( rx_queue[rx_tail].data[POS_DIRECTION] );
@@ -774,14 +774,14 @@ int main(void)
                                         }
                 break;
 
-                case      PING_PACKET: // do whatever
+                case      PING_PACKET : // do whatever
                 
                 break;
 
-                case      INS_PACKET: 
-                                      storePath();
-                                      insDone = 1;
-                                      PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+                case      INS_PACKET  : 
+                                        storePath();
+                                        insDone = 1;
+                                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
                 break;
 
                 case      PUSH_PACKET :
