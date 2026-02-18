@@ -41,8 +41,10 @@
 #define NRF_MODULE_ENABLED(APP_UART) 1
 #if NRF_MODULE_ENABLED(APP_UART)
 #include "app_uart.h"
+#include "nrf_uarte.h"
 #include "nrf_drv_uart.h"
 #include "nrf_assert.h"
+
 
 static uint8_t tx_buffer[1];
 static uint8_t rx_buffer[1];

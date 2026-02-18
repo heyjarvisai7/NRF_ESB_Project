@@ -3,8 +3,8 @@
  <Bookmarks/>
  <Breakpoints groups="Breakpoints" active_group="Breakpoints">
   <BreakpointListItem trigger="" line="108" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="3" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="387" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="393" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="403" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="409" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
   <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
  </Breakpoints>
  <ExecutionProfileWindow/>
@@ -65,9 +65,9 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="66" y="923" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="891" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1206" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="1195" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="734" useTextEdit="1" path="../../../../../../../../NRF_ESB_Project/NRF_ESB_Project-main/NRF_ESB_Project/components/libraries/log/src/nrf_log_frontend.c" left="0" top="719" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1126" useTextEdit="1" path="../../../../../../../../NRF_ESB_Project/NRF_ESB_Project-main/NRF_ESB_Project/components/proprietary_rf/esb/nrf_esb.c" left="0" top="1108" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1292" useTextEdit="1" path="../../../../../../../../NRF_ESB_Project/NRF_ESB_Project-main/NRF_ESB_Project/components/proprietary_rf/esb/nrf_esb.c" left="0" top="1268" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="109" useTextEdit="1" path="../../../../../../../../NRF_ESB_Project/NRF_ESB_Project-main/NRF_ESB_Project/modules/nrfx/mdk/ses_startup_nrf_common.s" left="0" top="91" codecName="Default"/>
  </Files>
  <EMStudioWindow activeProject="esb_prx_pca10040" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3711"/>

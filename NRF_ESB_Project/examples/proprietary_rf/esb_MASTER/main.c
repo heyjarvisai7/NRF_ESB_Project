@@ -50,6 +50,9 @@
 #include "boards.h"
 #include "nrf_delay.h"
 #include "app_util.h"
+#include "app_uart.h"
+#include "nrf_uarte.h"
+
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -84,7 +87,8 @@
 #define     POS_SERIAL_NO                     POS_RESERVED + sizeof(headeer.reserved) 
 #define     POS_PATH                          POS_SERIAL_NO + sizeof(ins_Packet.serial_no)
 
-
+#define     UART_TX_BUF_SIZE                  2048                                         /**< UART TX buffer size. */
+#define     UART_RX_BUF_SIZE                  2048                                         /**< UART RX buffer size. */
 #define     MAX_NODES                         255
 #define     MIN_NODES                         0
 #define     NOT_DEFINED                       0
@@ -128,6 +132,13 @@ typedef enum
     RX_SUCCESS
 
 }rf_event;
+
+typedef enum
+{
+    STORE_NODE_INFO,
+    SEND_RESPONSE_FOR_PING
+    
+}mode;
 
 
 
@@ -195,7 +206,7 @@ void storePath( void );
 void sendDataToNextSlave(void);
 bool rx_queue_push(uint8_t *in_data, uint16_t in_len);
 bool rx_queue_pop(void);
-
+void sending_to_server(uint32_t size);
 
 
 
@@ -247,6 +258,10 @@ uint8_t Ack_Txing = 0;
 neighbor_t Nxt_neighbor_table[MAX_NEIGHBORS];
 neighbor_t *Nxt_neighbor = &Nxt_neighbor_table[0];
 adv_packet_t advertisment_pcket;
+
+uint8_t uart_out_data[UART_RX_BUF_SIZE];
+uint16_t uart_rx_index = 0;
+uint8_t Uart_rx_flag = 0;
 
 uint8_t array_Addres[MAX_CIRCLE][ARRRAY_SIZE] =
 {
@@ -315,7 +330,7 @@ void construct_SERVER_packet( void )
 {
      if ( rx_queue[rx_tail].data[POS_PACKET_NUMBER] == 1 )
      {
-        totalLength = rx_queue[rx_tail].length;
+        totalLength = rx_queue[rx_tail].data[POS_LENGTH];
         memset(serverBuffer, 0 , SERVER_BUFFER_SIZE );
      }
 
@@ -329,8 +344,14 @@ void construct_SERVER_packet( void )
      else
      {
            memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], totalLength );
-           totalLength = NEXT_BYTES = 0;
+
+           sending_to_server( totalLength );
+           totalLength = 0;
+           NEXT_BYTES = 0;
+           memset( serverBuffer, 0, sizeof(serverBuffer) );
      }
+
+     
 }
   
 
@@ -343,8 +364,8 @@ void sendDataBidirectional(uint8_t direction)
          */
 
         nrf_delay_us(50000); //to send the data 
-        //set_slave_adress(PATH_ARRAY[0].path[0], Nxt_Circle_Base_Addr);
-        set_slave_adress( headeer.circle_array[0], Nxt_Circle_Base_Addr );
+        set_slave_adress(PATH_ARRAY[0].path[0], Nxt_Circle_Base_Addr);
+        //set_slave_adress( headeer.circle_array[0], Nxt_Circle_Base_Addr );
         sendDataToNextSlave();
     }
     else
@@ -449,11 +470,11 @@ void pingNodes( void )
           if ( RF_EVENT == NOT_DEFINED || RF_EVENT == TX_FAILED )
           {
                 nrf_esb_stop_rx();
-                //nrf_delay_ms(500);
-                set_slave_adress( neighbour_no ,Nxt_Circle_Base_Addr );
+                nrf_delay_ms(500);
+                set_slave_adress( neighbour_no , Nxt_Circle_Base_Addr );
                 memset(&headeer,0,sizeof(headeer));
                 headeer.packet_type = PING_PACKET;
-                headeer.length = 1;
+                headeer.length = SEND_RESPONSE_FOR_PING;
                // headeer.circle_array[Current_Circle] = addr_prefix[0];
                 memcpy(tx_payload.data,&headeer,sizeof(headeer));
                 memcpy(tx_payload.data + sizeof(headeer),"HAI",sizeof("HAI"));
@@ -479,8 +500,26 @@ void pingNodes( void )
               RF_EVENT = NOT_DEFINED;
           }
     }
-    sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+    
 } 
+
+
+void doDiagnosticTest(void)
+{       
+      Nxt_table_index = 0;
+        
+
+      pingNodes( );
+      sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+      Nxt_neighbor  = &Nxt_neighbor_table[0];
+
+      nrf_esb_flush_tx();
+      nrf_esb_flush_rx();
+      set_slave_adress( DCU_PREFIX[0] , DCU_BASE_ADDR_0 ); 
+      nrf_esb_start_rx();
+
+
+}
 
 
 #if 0  // for debugging 
@@ -726,8 +765,102 @@ uint32_t esb_init( void )
 	return err_code;
 }
 
-        uint8_t insDone = 0;
-        uint8_t DiagnosticTest = 0;
+
+
+void sending_to_server(uint32_t size)
+{
+    uint32_t err_code = 0;
+
+    for (uint32_t i = 0; i < size; i++)
+    {
+        while (true)
+        {
+            err_code = app_uart_put(serverBuffer[i]);
+
+            if (err_code == NRF_SUCCESS)
+            {
+                break;  // byte sent
+            }
+            else if (err_code == NRF_ERROR_BUSY ||
+                     err_code == NRF_ERROR_NO_MEM)
+            {
+                // retry until space available
+            }
+            else
+            {
+                NRF_LOG_ERROR("UART error 0x%x", err_code);
+                break;
+            }
+        }
+    }
+
+    NRF_LOG_FLUSH();
+}
+
+
+void uart_event_handle(app_uart_evt_t * p_event)
+{
+    uint32_t err_code;
+
+    switch ( p_event->evt_type )
+    {
+
+        case    APP_UART_DATA :
+                                UNUSED_VARIABLE(app_uart_get(&uart_out_data[uart_rx_index]));
+                                uart_rx_index++;
+                                Uart_rx_flag = 1;
+        break;
+
+
+        case    APP_UART_COMMUNICATION_ERROR :
+                                               APP_ERROR_HANDLER(p_event->data.error_communication);
+        break;
+
+
+        case    APP_UART_FIFO_ERROR :
+                                      APP_ERROR_HANDLER(p_event->data.error_code);
+        break;
+
+            
+        default:
+            break;
+    }
+}
+
+
+static void uart_init(void)
+{
+    uint32_t err_code;
+
+    app_uart_comm_params_t const comm_params =
+    {
+                                                .rx_pin_no    = RX_PIN_NUMBER,
+                                                .tx_pin_no    = TX_PIN_NUMBER,
+                                                .rts_pin_no   = RTS_PIN_NUMBER,
+                                                .cts_pin_no   = CTS_PIN_NUMBER,
+                                                .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+                                                .use_parity   = false,
+                                        #if defined (UART_PRESENT)
+                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                                        #else
+                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                                        #endif
+    };
+
+
+      APP_UART_FIFO_INIT(  &comm_params,
+                           UART_RX_BUF_SIZE,
+                           UART_TX_BUF_SIZE,
+                           uart_event_handle,
+                           APP_IRQ_PRIORITY_LOWEST,
+                           err_code );
+
+    APP_ERROR_CHECK(err_code);
+}
+
+
+uint8_t insDone = 0;
+uint8_t DiagnosticTest = 0;
 
 int main(void)
 {
@@ -752,6 +885,7 @@ int main(void)
 
 	NRF_LOG_DEBUG("DCU code started");
         NRF_LOG_FLUSH();
+        uart_init();
 
         err_code = nrf_esb_start_rx();
         APP_ERROR_CHECK(err_code);
@@ -759,6 +893,7 @@ int main(void)
         while( true )
         {
            NRF_LOG_FLUSH();
+
 
            switch (  PACKET )
            {
@@ -794,12 +929,13 @@ int main(void)
            
            if (DiagnosticTest == 1)
            {
-                pingNodes();
+                doDiagnosticTest();
                 DiagnosticTest = 0;
            }                        
             
 
-            if ( path_Index != 0 && insDone  == 1 ) // need to start the sending req/data packet 
+            //if ( path_Index != 0 && insDone  == 1 ) // need to start the sending req/data packet 
+            if ( Uart_rx_flag == 1 )  
             {
                   /*
                    * This if PASS means something path is present at DCU 
@@ -807,7 +943,9 @@ int main(void)
                    * If match is there means then the SERVER request is send through the PATH to that SERIAL number node
                    * Then same in that path only RESPONSE will come  
                    */
-                   insDone = 0;
+                   nrf_delay_us(500000);
+                   NRF_LOG_INFO("uart_rx_index : %d",uart_rx_index );
+                   NRF_LOG_FLUSH();
                    matchIndex = matchSerialNo( 0, server_SerialNo );
                   if( matchIndex != 0xFF )
                   {
@@ -815,14 +953,22 @@ int main(void)
                        * Actually this header filling data need to take from UART(GSM)
                        */
                       nrf_esb_stop_rx();
-                      fillHeader(DATA_PACKET, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
-                      memcpy(tx_payload.data, &headeer, sizeof(headeer));
-                      memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
+                      //fillHeader(DATA_PACKET, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
 
-                      tx_payload.length = ( PACKET_HEADER_SIZE + (open_request1[2] + 2));
+                      fillHeader(DATA_PACKET, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
+                      memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
 
+                      //memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
+                      //tx_payload.length = ( PACKET_HEADER_SIZE + (open_request1[2] + 2));
+
+                      memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
+                      tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);    
+                                
+                      uart_rx_index = 0;
                       sendDataBidirectional( headeer.Direction );
                   } 
+                  insDone = 0;
+                  Uart_rx_flag = 0;
             }
             
         }	

@@ -80,7 +80,7 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 
 /*lint -save -esym(40, BUTTON_1) -esym(40, BUTTON_2) -esym(40, BUTTON_3) -esym(40, BUTTON_4) -esym(40, LED_1) -esym(40, LED_2) -esym(40, LED_3) -esym(40, LED_4) */
 
-#define START_BYTE                            PACKET_HEADER_SIZE
+#define     START_BYTE                        PACKET_HEADER_SIZE
 
 #define     PACKET_HEADER_SIZE                sizeof(PACKET_HEADER)
 #define     PACKET_INS_SIZE                   sizeof(PACKET_INS)
@@ -109,7 +109,7 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 #define     MAX_NODES                         255
 #define     MIN_NODES                         0  
 
-#define     RX_QUEUE_SIZE                     7
+#define     RX_QUEUE_SIZE                     15
 #define     APP_BUF_SIZE                      500 
 #define     NOT_DEFINED                       0
 #define     UART_TX_BUF_SIZE                2048                                         /**< UART TX buffer size. */
@@ -313,7 +313,7 @@ void Construct_DLMS_Packet(void)
     {
             if((rx_payload.data[START_BYTE + 2]))
             {
-                    length = (((rx_payload.data[START_BYTE +1] & 0x07) << 8) | rx_payload.data[START_BYTE +2]);
+                    length = (((rx_payload.data[START_BYTE + 1] & 0x07) << 8) | rx_payload.data[START_BYTE +2]);
                     length += 2;
             }
             i = 0;
@@ -492,6 +492,7 @@ bool rx_queue_push(uint8_t *in_data, uint16_t in_len)
 
 bool rx_queue_pop(void)
 {
+    NRF_LOG_INFO("buf_count %d", buf_count);
     if ( buf_count <= 0 )
     {
         NRF_LOG_INFO("POPED FAIL");
@@ -805,7 +806,7 @@ static void pingNodes( uint8_t circle )
 
 void doDiagnosticTest(void)
 {       
-      Nxt_table_index = 0;
+      Nxt_table_index  = 0;
       Prev_table_index = 0;
     
       if (Current_Circle == MIN_CIRCLE)
@@ -1056,6 +1057,8 @@ void send_data_to_dcu(uint16_t length)
 		{
                         memset(sending_data , 0, MAX_TRANFERSIZE);
                         header.packet_Number++;
+                        header.length = length1;
+                        header.packet_type = DATA_PACKET;
                         memcpy( sending_data, &header, PACKET_HEADER_SIZE );
                         memcpy( sending_data + PACKET_HEADER_SIZE, data_array1+sent_bytes_count, DATA_SIZE );
 		        fillPacket( header.Direction, sending_data, DATA_SIZE + PACKET_HEADER_SIZE );
@@ -1073,6 +1076,8 @@ void send_data_to_dcu(uint16_t length)
                        length1  = length;
                         memset(sending_data , 0, MAX_TRANFERSIZE);
                         header.packet_Number++; 
+                        header.length = length1;
+                        header.packet_type = DATA_PACKET;
                         memcpy( sending_data, &header, PACKET_HEADER_SIZE );
                         memcpy( sending_data + PACKET_HEADER_SIZE, data_array1 + sent_bytes_count, DATA_SIZE );
 			fillPacket( header.Direction, sending_data, ( length1 + PACKET_HEADER_SIZE ));
@@ -1082,6 +1087,7 @@ void send_data_to_dcu(uint16_t length)
                             NRF_LOG_RAW_INFO(" %x",data_array1[i]);
                         }
                         length = 0;
+                        memset(data_array1 , 0 ,sizeof(data_array1));
 		}
 	}
         uart_rx_index = 0;
@@ -1158,6 +1164,8 @@ void main(void)
                                             else
                                             {
                                               Construct_DLMS_Packet();
+                                              rx_queue_pop();
+
 
                                             }
                                         }
@@ -1223,7 +1231,7 @@ void main(void)
 
         if( Uart_rx_flag == 1 )
         {
-           nrf_delay_us(50000);
+           nrf_delay_us(500000);
           //memcpy(&rx_queue[rx_tail].data[PACKET_HEADER_SIZE+1], data_array1, uart_rx_index);
           
           send_data_to_dcu(uart_rx_index);
