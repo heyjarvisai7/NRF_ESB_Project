@@ -278,6 +278,8 @@ void storePath( void )
       memcpy( &PATH_ARRAY[path_Index].path, &rx_payload.data[POS_CIRCLE_ARRAY], ARRRAY_SIZE);
    
       path_Index++;
+
+      NRF_LOG_INFO("PATH stored");
 }
 
 uint8_t matchSerialNo(uint8_t index, uint8_t *serialNo)
@@ -650,6 +652,26 @@ bool rx_queue_pop(void)
 
 #endif
 
+void Blink_LEDs(void)
+{
+    // Turn ON all LEDs (assuming active LOW)
+    nrf_gpio_pin_write(LED_1, 0);
+    nrf_gpio_pin_write(LED_2, 0);
+    nrf_gpio_pin_write(LED_3, 0);
+    nrf_gpio_pin_write(LED_4, 0);
+
+    nrf_delay_ms(50);
+
+    // Turn OFF all LEDs
+    nrf_gpio_pin_write(LED_1, 1);
+    nrf_gpio_pin_write(LED_2, 1);
+    nrf_gpio_pin_write(LED_3, 1);
+    nrf_gpio_pin_write(LED_4, 1);
+
+    nrf_delay_ms(200);
+}
+
+
 
 
 void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
@@ -659,7 +681,8 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
               case    NRF_ESB_EVENT_TX_SUCCESS:
 
                                                 NRF_LOG_DEBUG("TX SUCCESS EVENT");
-                                                RF_EVENT = TX_SUCCESS;                      
+                                                RF_EVENT = TX_SUCCESS;
+                                                Blink_LEDs();                      
 
               break;
 
@@ -676,12 +699,13 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
               case    NRF_ESB_EVENT_RX_RECEIVED:
                       
-
+                              
                                               if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                                               {
 
                                                    /*Need to store in comming packets*/
                                                    RF_EVENT = RX_SUCCESS;
+                                                   Blink_LEDs(); 
                                        
                                                    switch ( rx_payload.data[POS_PACKET_TYPE] )
                                                    {
@@ -877,6 +901,7 @@ int main(void)
 	APP_ERROR_CHECK(err_code);
 
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
+        uart_init();
 
 	clocks_start();
 
@@ -885,7 +910,7 @@ int main(void)
 
 	NRF_LOG_DEBUG("DCU code started");
         NRF_LOG_FLUSH();
-        uart_init();
+        
 
         err_code = nrf_esb_start_rx();
         APP_ERROR_CHECK(err_code);
