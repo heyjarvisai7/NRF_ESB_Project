@@ -62,40 +62,37 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="5" y="851" useTextEdit="1" path="../../../main.c" left="0" top="844" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="42" useTextEdit="1" path="../config/sdk_config.h" left="0" selected="1" top="57" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="5" y="851" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="817" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="42" useTextEdit="1" path="../config/sdk_config.h" left="0" top="42" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="78" y="669" useTextEdit="1" path="../../../../../../components/ble/ble_advertising/ble_advertising.c" left="0" top="649" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="1" y="218" useTextEdit="1" path="../../../../../../components/ble/ble_services/ble_nus/ble_nus.c" left="0" top="213" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="75" y="489" useTextEdit="1" path="../../../../../../components/ble/nrf_ble_gatt/nrf_ble_gatt.c" left="0" top="473" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="1" y="445" useTextEdit="1" path="../../../../../../components/ble/nrf_ble_qwr/nrf_ble_qwr.c" left="0" top="428" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="12" y="516" useTextEdit="1" path="../../../../../../components/ble/common/ble_conn_params.c" left="0" top="506" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="48" y="218" useTextEdit="1" path="../../../../../../components/ble/common/ble_conn_state.c" left="0" top="212" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="6" y="97" useTextEdit="1" path="../../../../../../components/libraries/util/app_error_weak.c" left="0" top="78" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="6" y="97" useTextEdit="1" path="../../../../../../components/libraries/util/app_error_weak.c" left="0" top="71" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="11" y="222" useTextEdit="1" path="../../../../../../components/softdevice/common/nrf_sdh_ble.c" left="0" top="220" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="32" y="433" useTextEdit="1" path="../../../../../../components/softdevice/s132/headers/ble.h" left="0" top="428" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="../../../../../../components/libraries/fds/fds.c" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="../../../../../../components/libraries/fstorage/nrf_fstorage.c" left="0" top="0" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="../../../../../../components/ble/peer_manager/id_manager.c" left="0" top="0" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="8" y="1554" useTextEdit="1" path="D:/authenticationworking/nRF5_SDK_17.1.0_ddde560/examples/ble_peripheral/ble_app_uart/main.c" left="0" top="1547" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="31" y="95" useTextEdit="1" path="../../../../../../components/boards/pca10040.h" left="0" top="88" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="21" y="245" useTextEdit="1" path="../../../../../../modules/nrfx/mdk/nrf52832_peripherals.h" left="0" top="238" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="48" useTextEdit="1" path="D:/authenticationworking/nRF5_SDK_17.1.0_ddde560/components/libraries/util/app_error_handler_gcc.c" left="0" top="35" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="207" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/src/nrfx_uarte.c" left="0" top="192" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="44" useTextEdit="1" path="../../../../../../modules/nrfx/nrfx.h" left="0" top="25" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="44" useTextEdit="1" path="../../../../../../modules/nrfx/nrfx.h" left="0" top="4" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="1" y="91" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/include/nrfx_uarte.h" left="0" top="68" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="2" y="80" useTextEdit="1" path="../../../../../../components/libraries/uart/app_uart.h" left="0" top="67" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="71" useTextEdit="1" path="D:/authenticationworking/nRF5_SDK_17.1.0_ddde560/modules/nrfx/mdk/ses_startup_nrf52.s" left="0" top="58" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1279" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/apply_old_config.h" left="0" top="1271" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="55" useTextEdit="1" path="../../../../../../components/libraries/util/sdk_common.h" left="0" top="44" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="55" useTextEdit="1" path="../../../../../../components/libraries/util/sdk_common.h" left="0" top="33" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="2383" useTextEdit="1" path="../../../../../../modules/nrfx/mdk/nrf52.h" left="0" top="2370" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="44" useTextEdit="1" path="../../../../../../integration/nrfx/nrfx_config.h" left="0" top="25" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="140" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/nrf_drv_uart.c" left="0" top="121" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="44" useTextEdit="1" path="../../../../../../integration/nrfx/nrfx_config.h" left="0" top="3" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="140" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/nrf_drv_uart.c" left="0" top="97" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="47" useTextEdit="1" path="../../../../../../components/libraries/uart/app_uart_fifo.c" left="0" top="40" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="133" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/nrf_drv_saadc.h" left="0" top="114" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="133" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/nrf_drv_saadc.h" left="0" top="99" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="236" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/src/nrfx_saadc.c" left="0" top="217" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="1" y="774" useTextEdit="1" path="../../../../../../modules/nrfx/hal/nrf_saadc.h" left="0" top="761" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="68" useTextEdit="1" path="../../../../../../integration/nrfx/nrfx_glue.h" left="0" top="57" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="8" y="102" useTextEdit="1" path="../../../../../../components/libraries/util/nrf_assert.h" left="0" top="88" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="8" y="102" useTextEdit="1" path="../../../../../../components/libraries/util/nrf_assert.h" left="0" top="78" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="5" y="86" useTextEdit="1" path="../../../../../../components/libraries/fifo/app_fifo.c" left="0" top="76" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="5" y="683" useTextEdit="1" path="../../../../../../modules/nrfx/hal/nrf_gpio.h" left="0" top="664" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="282" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/src/nrfx_uart.c" left="0" top="273" codecName="Default"/>

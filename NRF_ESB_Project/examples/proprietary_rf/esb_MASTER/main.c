@@ -97,7 +97,7 @@
 #define     SIZE_OF_SERIALNUM                 8
 #define     NOT_FOUND                         0xFF
 
-#define     RX_QUEUE_SIZE                     7
+#define     QUEUE_SIZE                        7
 #define     APP_BUF_SIZE                      500 
 
 #define     MAX_LENGTH                        ( NRF_ESB_MAX_PAYLOAD_LENGTH - PACKET_HEADER_SIZE )
@@ -118,7 +118,8 @@ typedef enum
 
 typedef enum 
 {
-    DATA_PACKET = 1,
+    UN_DEFINED,
+    DATA_PACKET,
     PING_PACKET,
     INS_PACKET,
     PUSH_PACKET
@@ -167,8 +168,10 @@ typedef struct __attribute__((packed)) Ins_Packet
 
 typedef struct
 {
-    uint8_t  data[APP_BUF_SIZE];
     uint16_t length;
+    uint8_t  rssi;
+    uint8_t  data[APP_BUF_SIZE];
+
 } rx_packet_t;
 
 
@@ -204,8 +207,8 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address);
 uint8_t matchSerialNo(uint8_t index, uint8_t *seralNo);
 void storePath( void );
 void sendDataToNextSlave(void);
-bool rx_queue_push(uint8_t *in_data, uint16_t in_len);
-bool rx_queue_pop(void);
+bool data_queue_push(uint8_t *in_data, uint16_t in_len);
+bool ping_ins_queue_pop(void);
 void sending_to_server(uint32_t size);
 
 
@@ -224,7 +227,7 @@ PACKET_INS PATH_ARRAY[INS_PACKET_ARRAY_SIZE];
 uint8_t path_Index = 0;
 uint8_t loop_Index = 0;
 
-uint8_t PACKET = 0;
+uint8_t packet_type = UN_DEFINED;
 uint8_t RF_EVENT = NOT_DEFINED;
 uint8_t TX_FAIL_FLAG = 0;
 uint8_t volatile Send_Data_To_Nxt_Slave = 0;
@@ -243,10 +246,17 @@ uint8_t DCU_BASE_ADDR_0[4] = {0xDC, 0xDC, 0xDC, 0xDC};
 uint8_t DCU_BASE_ADDR_1[4] = {0xC2, 0xC2, 0xC2, 0xC2};
 uint8_t DCU_PREFIX[1] = {0x01};
 
-volatile rx_packet_t rx_queue[RX_QUEUE_SIZE];
-volatile uint8_t rx_head    =   0;
-volatile uint8_t rx_tail    =   0;
-volatile uint8_t buf_count  =   0;
+
+volatile rx_packet_t data_queue[QUEUE_SIZE];
+volatile uint8_t data_queue_head    =   0;
+volatile uint8_t data_queue_tail    =   0;
+volatile uint8_t data_buf_count     =   0;
+
+volatile rx_packet_t ping_ins_queue[QUEUE_SIZE];
+volatile uint8_t ping_ins_queue_head    =   0;
+volatile uint8_t ping_ins_queue_tail    =   0;
+volatile uint8_t ping_ins_buf_count     =   0;
+
 
 uint8_t serverBuffer[SERVER_BUFFER_SIZE];
 uint8_t totalLength         =   0;
@@ -330,22 +340,22 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address)
 
 void construct_SERVER_packet( void )
 {
-     if ( rx_queue[rx_tail].data[POS_PACKET_NUMBER] == 1 )
+     if ( data_queue[data_queue_tail].data[POS_PACKET_NUMBER] == 1 )
      {
-        totalLength = rx_queue[rx_tail].data[POS_LENGTH];
+        totalLength = data_queue[data_queue_tail].data[POS_LENGTH];
         memset(serverBuffer, 0 , SERVER_BUFFER_SIZE );
      }
 
      if ( totalLength > MAX_LENGTH )
      {
-          memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], MAX_LENGTH );
+          memcpy( serverBuffer + NEXT_BYTES, (void *)&data_queue[data_queue_tail].data[POS_DATA], MAX_LENGTH );
           totalLength -= MAX_LENGTH;
           NEXT_BYTES  += MAX_LENGTH;  
      }
 
      else
      {
-           memcpy( serverBuffer + NEXT_BYTES, (void *)&rx_queue[rx_tail].data[POS_DATA], totalLength );
+           memcpy( serverBuffer + NEXT_BYTES, (void *)&data_queue[data_queue_tail].data[POS_DATA], totalLength );
 
            sending_to_server( totalLength );
            totalLength = 0;
@@ -526,27 +536,27 @@ void doDiagnosticTest(void)
 
 #if 0  // for debugging 
 
-bool rx_queue_push(uint8_t *in_data, uint16_t in_len)
+bool data_queue_push(uint8_t *in_data, uint16_t in_len)
 {
-    NRF_LOG_INFO("buf_count %d",buf_count);
-    NRF_LOG_INFO("RX_QUEUE_SIZE %d",RX_QUEUE_SIZE);
+    NRF_LOG_INFO("data_buf_count %d",data_buf_count);
+    NRF_LOG_INFO("QUEUE_SIZE %d",QUEUE_SIZE);
     NRF_LOG_FLUSH();
    
-    if ( buf_count >= RX_QUEUE_SIZE)
+    if ( data_buf_count >= QUEUE_SIZE)
     {
         NRF_LOG_INFO("PUSHED FAIL");
         NRF_LOG_FLUSH();
         return false;
     }
-    memcpy((void *)rx_queue[rx_head].data, in_data, in_len);
-    rx_queue[rx_head].length = in_len;
+    memcpy((void *)data_queue[data_queue_head].data, in_data, in_len);
+    data_queue[data_queue_head].length = in_len;
 
-    buf_count++;
-    NRF_LOG_INFO("rx_head-- %d",rx_head);
-    NRF_LOG_INFO("rx_tail-- %d",rx_tail);
- //   if((rx_head + 1 % RX_QUEUE_SIZE) != rx_tail)
+    data_buf_count++;
+    NRF_LOG_INFO("data_queue_head-- %d",data_queue_head);
+    NRF_LOG_INFO("data_queue_tail-- %d",data_queue_tail);
+ //   if((data_queue_head + 1 % QUEUE_SIZE) != rx_tail)
     {
-        rx_head = (rx_head + 1) % RX_QUEUE_SIZE;
+        data_queue_head = (data_queue_head + 1) % QUEUE_SIZE;
         NRF_LOG_INFO("++");
         NRF_LOG_FLUSH();
     }
@@ -554,13 +564,13 @@ bool rx_queue_push(uint8_t *in_data, uint16_t in_len)
     nrf_esb_flush_rx();
 
     NRF_LOG_INFO("DATA PUSHED");
-    NRF_LOG_INFO("rx_head %d",rx_head);
-    NRF_LOG_INFO("buf_count %d",buf_count);
+    NRF_LOG_INFO("data_queue_head %d",data_queue_head);
+    NRF_LOG_INFO("data_buf_count %d",data_buf_count);
     NRF_LOG_FLUSH();
 
-    for(int j = 0; j < RX_QUEUE_SIZE; j++)
+    for(int j = 0; j < QUEUE_SIZE; j++)
     {
-        NRF_LOG_INFO("Length of %d is : %d", j, rx_queue[j].length);
+        NRF_LOG_INFO("Length of %d is : %d", j, data_queue[j].length);
         NRF_LOG_FLUSH();
     }
 
@@ -568,9 +578,9 @@ bool rx_queue_push(uint8_t *in_data, uint16_t in_len)
 }
 
 
-bool rx_queue_pop(void)
+bool ping_ins_queue_pop(void)
 {
-    if ( buf_count <= 0 )
+    if ( data_buf_count <= 0 )
     {
         NRF_LOG_INFO("POPED FAIL");
         NRF_LOG_FLUSH();
@@ -578,25 +588,25 @@ bool rx_queue_pop(void)
     }
 
     // Get oldest packet
-    //pkt = &rx_queue[rx_tail];
+    //pkt = &data_queue[data_queue_tail];
 
     // Optional: clear memory (true delete)
-    memset((void *)&rx_queue[rx_tail], 0, sizeof(rx_queue[rx_tail]));
-    //rx_queue[rx_tail].len = 0;
+    memset((void *)&data_queue[data_queue_tail], 0, sizeof(data_queue[data_queue_tail]));
+    //data_queue[data_queue_tail].len = 0;
 
     // Move tail forward
-    rx_tail = (rx_tail + 1) % RX_QUEUE_SIZE;
+    data_queue_tail = (data_queue_tail + 1) % QUEUE_SIZE;
 
-    buf_count--;
+    data_buf_count--;
 
     NRF_LOG_INFO("DATA POPED");
-    NRF_LOG_INFO("rx_tail %d",rx_tail);
-    NRF_LOG_INFO("buf_count %d",buf_count);
+    NRF_LOG_INFO("data_queue_tail %d",data_queue_tail);
+    NRF_LOG_INFO("data_buf_count %d",data_buf_count);
     NRF_LOG_FLUSH();
 
-    for(int j = 0; j < RX_QUEUE_SIZE; j++)
+    for(int j = 0; j < QUEUE_SIZE; j++)
     {
-        NRF_LOG_INFO("Length of %d is : %d", j, rx_queue[j].length);
+        NRF_LOG_INFO("Length of %d is : %d", j, data_queue[j].length);
         NRF_LOG_FLUSH();
     }
     return true;
@@ -604,47 +614,99 @@ bool rx_queue_pop(void)
 
 #else 
 
-bool rx_queue_push(uint8_t *in_data, uint16_t in_len)
+bool ping_ins_queue_push(uint8_t *in_data, uint16_t in_len, uint8_t rssi)
 {
-    if ( buf_count >= RX_QUEUE_SIZE)
+    if ( ping_ins_buf_count >= QUEUE_SIZE)
     {
-        NRF_LOG_INFO("PUSHED FAIL");
+        NRF_LOG_INFO("PING PUSHED FAIL");
         NRF_LOG_FLUSH();
         return false;
     }
-    memcpy((void *)rx_queue[rx_head].data, in_data, in_len);
-    rx_queue[rx_head].length = in_len;
+    memcpy((void *)ping_ins_queue[ping_ins_queue_head].data, in_data, in_len);
+    ping_ins_queue[ping_ins_queue_head].length = in_len;
+    ping_ins_queue[ping_ins_queue_head].rssi   = rssi;
 
-    buf_count++;
+    ping_ins_buf_count++;
    
-    rx_head = (rx_head + 1) % RX_QUEUE_SIZE;
+    ping_ins_queue_head = (ping_ins_queue_head + 1) % QUEUE_SIZE;
     
     nrf_esb_flush_rx();
     nrf_esb_flush_tx();
 
-    NRF_LOG_INFO("DATA PUSHED");
+    NRF_LOG_INFO("PING PUSHED");
+    //NRF_LOG_FLUSH();
+
+    return true;
+}
+
+bool ping_ins_queue_pop(void)
+{
+    NRF_LOG_INFO("(Before POP)ping_ins_buf_count %d", ping_ins_buf_count );
+    if ( ping_ins_buf_count <= 0 )
+    {
+        NRF_LOG_INFO("PING_INS POPED FAIL");
+        //NRF_LOG_FLUSH();
+        return false;   
+    }
+
+    memset((void *)&ping_ins_queue[ping_ins_queue_tail], 0, sizeof(ping_ins_queue[ping_ins_queue_tail]));
+   
+    ping_ins_queue_tail = (ping_ins_queue_tail + 1) % QUEUE_SIZE;
+
+    ping_ins_buf_count--;
+
+    NRF_LOG_INFO("PING_INS POPED");
+    NRF_LOG_INFO("(After POP)ping_ins_buf_count %d", ping_ins_buf_count );
     //NRF_LOG_FLUSH();
 
     return true;
 }
 
 
-bool rx_queue_pop(void)
+bool data_queue_push(uint8_t *in_data, uint16_t in_len)
 {
-    if ( buf_count <= 0 )
+    if ( data_buf_count >= QUEUE_SIZE)
     {
-        NRF_LOG_INFO("POPED FAIL");
+        NRF_LOG_INFO("DATA PUSHED FAIL");
+        //NRF_LOG_FLUSH();
+        return false;
+    }
+    memcpy((void *)data_queue[data_queue_head].data, in_data, in_len);
+    data_queue[data_queue_head].length = in_len;
+
+    data_buf_count++;
+   
+    data_queue_head = (data_queue_head + 1) % QUEUE_SIZE;
+    
+    nrf_esb_flush_rx();
+    nrf_esb_flush_tx();
+
+    NRF_LOG_INFO("DATA PUSHED");
+    
+    //NRF_LOG_FLUSH();
+
+    return true;
+}
+
+
+bool data_queue_pop(void)
+{
+    NRF_LOG_INFO("(Before POP)data_buf_count %d", data_buf_count);
+    if ( data_buf_count <= 0 )
+    {
+        NRF_LOG_INFO("DATA POPED FAIL");
         NRF_LOG_FLUSH();
         return false;   
     }
 
-    memset((void *)&rx_queue[rx_tail], 0, sizeof(rx_queue[rx_tail]));
+    memset((void *)&data_queue[data_queue_tail], 0, sizeof(data_queue[data_queue_tail]));
    
-    rx_tail = (rx_tail + 1) % RX_QUEUE_SIZE;
+    data_queue_tail = (data_queue_tail + 1) % QUEUE_SIZE;
 
-    buf_count--;
+    data_buf_count--;
 
     NRF_LOG_INFO("DATA POPED");
+    NRF_LOG_INFO("(After POP)data_buf_count %d", data_buf_count );
     NRF_LOG_FLUSH();
 
     return true;
@@ -703,38 +765,32 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                               if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                                               {
 
-                                                   /*Need to store in comming packets*/
                                                    RF_EVENT = RX_SUCCESS;
                                                    Blink_LEDs(); 
                                        
                                                    switch ( rx_payload.data[POS_PACKET_TYPE] )
                                                    {
                                                         case    PING_PACKET :
-                                  
-                                                                              PACKET   =   PING_PACKET;
+                                                                              ping_ins_queue_push(rx_payload.data, rx_payload.length, rx_payload.rssi);
                                                         break;
 
                                                         case    INS_PACKET  :
-                                  
-                                                                              PACKET   =   INS_PACKET;
+                                                                              ping_ins_queue_push(rx_payload.data, rx_payload.length, rx_payload.rssi);
                                                         break;
 
-                                                        case    DATA_PACKET :
-                                
-                                                                              PACKET   =    DATA_PACKET;   
-                                                                              rx_queue_push(rx_payload.data, rx_payload.length );
+                                                        case    DATA_PACKET :                                                                             
+                                                                              data_queue_push(rx_payload.data, rx_payload.length );
                                                         break;
 
                                                         case    PUSH_PACKET :
-                                                                              PACKET   =    PUSH_PACKET;
-                                                                              rx_queue_push(rx_payload.data, rx_payload.length);
+                                                                              data_queue_push(rx_payload.data, rx_payload.length);
                                                         break;
 
                                                    } 
 
                                                    #ifdef DAMU
                                                    NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
-                                                   NRF_LOG_INFO("rx_queue[rx_tail].length : %d",rx_queue[rx_tail].length);    
+                                                   NRF_LOG_INFO("rx_queue[data_queue_tail].length : %d",rx_queue[data_queue_tail].length);    
                                                    #endif                 
                                               }  
 
@@ -919,18 +975,33 @@ int main(void)
         {
            NRF_LOG_FLUSH();
 
+           if ( ping_ins_buf_count > 0 )
+           {
+              packet_type = ping_ins_queue[ping_ins_queue_tail].data[POS_PACKET_TYPE];
+           }
+           else
+           {
+              if ( data_buf_count > 0 )
+              {
+                  packet_type = data_queue[data_queue_tail].data[POS_PACKET_TYPE];
+              }
+              else
+              {
+                  packet_type = NOT_DEFINED;
+              }
+           }
 
-           switch (  PACKET )
+
+           switch (  packet_type )
            {
               
                 NRF_LOG_FLUSH();
 
                 case      DATA_PACKET : 
-                                        if ( buf_count != 0 )
+                                        if ( data_buf_count != 0 )
                                         {
-                                              sendDataBidirectional( rx_queue[rx_tail].data[POS_DIRECTION] );
-                                              rx_queue_pop();
-                                              PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+                                              sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
+                                              data_queue_pop();
                                         }
                 break;
 
@@ -940,14 +1011,13 @@ int main(void)
 
                 case      INS_PACKET  : 
                                         storePath();
-                                        insDone = 1;
-                                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+                                        ping_ins_queue_pop(); 
+                                        insDone = 1;                                    
                 break;
 
                 case      PUSH_PACKET :
-                                        sendDataBidirectional( rx_queue[rx_tail].data[POS_DIRECTION] );
-                                        rx_queue_pop();
-                                        PACKET = rx_queue[rx_tail].data[POS_PACKET_TYPE];
+                                        sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
+                                        data_queue_pop();
                 break;
 
            }
