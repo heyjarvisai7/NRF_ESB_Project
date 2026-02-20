@@ -234,7 +234,7 @@ uint8_t arrays[MAX_CIRCLE][ARRRAY_SIZE] =
 
 uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
 uint8_t base_addr_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
-uint8_t addr_prefix[8] = {0x20};
+uint8_t addr_prefix[8] = {0x15};
 
 uint8_t DCU_BASE[4] = { 0xDC, 0xDC, 0xDC, 0xDC };
 uint8_t DCU_PREFIX[1] = { 0x01 };
@@ -257,7 +257,7 @@ uint8_t volatile Mater_Data_received = 0;
 uint16_t length = 0;
 uint8_t i = 0;
 uint8_t sent_bytes_count = 0;
-uint8_t Current_Circle = 1;
+uint8_t Current_Circle = 0;
 uint8_t uartbuff[2048];
 uint8_t Nxt_table_index;
 uint8_t Prev_table_index;
@@ -274,6 +274,7 @@ neighbor_t *Nxt_neighbor = &Nxt_neighbor_table[0];
 neighbor_t *Prev_neighbor = &Prev_neighbor_table[0];
 
 
+
 void sort_neighbors_by_rssi(neighbor_t *table, int n)
 {
     for (int i = 1; i < n; i++)
@@ -281,13 +282,33 @@ void sort_neighbors_by_rssi(neighbor_t *table, int n)
         neighbor_t key = table[i];
         int j = i - 1;
 
-        while (j >= 0 && table[j].rssi < key.rssi)
+        while (j >= 0 && table[j].rssi > key.rssi)
         {
             table[j + 1] = table[j];
             j--;
         }
         table[j + 1] = key;
     }
+}
+
+#include <stdio.h>
+
+void print_neighbors(neighbor_t *table, int n)
+{
+    NRF_LOG_INFO("Neighbor Table:\n");
+    NRF_LOG_INFO("-----------------\n");
+
+    for (int i = 0; i < n; i++)
+    {
+        NRF_LOG_INFO("Index %d -> ID: %d, RSSI: %d\n",
+               i,
+               table[i].node_id,
+               table[i].rssi);
+        NRF_LOG_FLUSH();
+    }
+
+    NRF_LOG_INFO("-----------------\n");
+    
 }
 
 
@@ -553,6 +574,14 @@ bool data_queue_pop(void)
 #endif
 void Blink_LEDs(void)
 {
+    // Turn OFF all LEDs
+    nrf_gpio_pin_write(LED_1, 1);
+    nrf_gpio_pin_write(LED_2, 1);
+    nrf_gpio_pin_write(LED_3, 1);
+    nrf_gpio_pin_write(LED_4, 1);
+
+     nrf_delay_ms(50);
+
     // Turn ON all LEDs (assuming active LOW)
     nrf_gpio_pin_write(LED_1, 0);
     nrf_gpio_pin_write(LED_2, 0);
@@ -560,15 +589,8 @@ void Blink_LEDs(void)
     nrf_gpio_pin_write(LED_4, 0);
 
     nrf_delay_ms(50);
-
-    // Turn OFF all LEDs
-    nrf_gpio_pin_write(LED_1, 1);
-    nrf_gpio_pin_write(LED_2, 1);
-    nrf_gpio_pin_write(LED_3, 1);
-    nrf_gpio_pin_write(LED_4, 1);
-
-    nrf_delay_ms(50);
 }
+
 
 
 void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
@@ -786,7 +808,7 @@ void pingPacket(void)
                 header.packet_type = PACKET_PING;
                 header.length = STORE_NODE_INFO;
                 
-                if(ping_ins_queue[ping_ins_queue_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 && ping_ins_queue[ping_ins_queue_tail].data[(POS_CIRCLE_ARRAY + Current_Circle)] != 0) 
+                if(ping_ins_queue[ping_ins_queue_tail].data[(POS_CIRCLE_ARRAY + Current_Circle) - 1] != 0 || Current_Circle == 0 ) 
                 {
                       header.Direction = BACKWORD;
                 }
@@ -946,22 +968,26 @@ void doDiagnosticTest(void)
       if (Current_Circle == MIN_CIRCLE)
       {
           pingNodes( Current_Circle + 1 );
-          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+          sort_neighbors_by_rssi( Nxt_neighbor_table, Nxt_table_index );
+          print_neighbors( Nxt_neighbor_table, Nxt_table_index );
          
       }
       else if (Current_Circle == MAX_CIRCLE)
       {
           pingNodes( Current_Circle - 1 );
-          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1);
+          sort_neighbors_by_rssi( Prev_neighbor_table, Prev_table_index );
+          print_neighbors( Prev_neighbor_table, Prev_table_index );  
           
       }
       else
       {
           pingNodes( Current_Circle - 1 );
-          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1);         
+          sort_neighbors_by_rssi( Prev_neighbor_table, Prev_table_index ); 
+          print_neighbors( Prev_neighbor_table, Prev_table_index );        
 
           pingNodes( Current_Circle + 1 );
-          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+          sort_neighbors_by_rssi( Nxt_neighbor_table, Nxt_table_index );
+          print_neighbors( Nxt_neighbor_table, Nxt_table_index );
           
       }
 

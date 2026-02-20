@@ -67,8 +67,8 @@
 //#define     DAMU
 #define     MAX_CIRCLE                        4
 #define     ARRRAY_SIZE                       4
-#define     PACKET_HEADER_SIZE                sizeof(PACKET_HEADER)
-#define     PACKET_INS_SIZE                   sizeof(PACKET_INS)
+#define     PACKET_HEADER_SIZE                sizeof(packet_header)
+#define     PACKET_INS_SIZE                   sizeof(packet_ins)
 
 #define     POS_HEADER                        0
 #define     POS_INS_PACKET                    PACKET_HEADER_SIZE
@@ -91,7 +91,6 @@
 #define     UART_RX_BUF_SIZE                  2048                                         /**< UART RX buffer size. */
 #define     MAX_NODES                         255
 #define     MIN_NODES                         0
-#define     NOT_DEFINED                       0
 
 #define     INS_PACKET_ARRAY_SIZE             50
 #define     SIZE_OF_SERIALNUM                 8
@@ -116,15 +115,17 @@ typedef enum
 
 }DIRECTION;
 
+
+
 typedef enum 
 {
-    UN_DEFINED,
-    DATA_PACKET,
-    PING_PACKET,
-    INS_PACKET,
-    PUSH_PACKET
+    NOT_DEFINED,
+    PACKET_DATA,
+    PACKET_PING,
+    PACKET_INS,
+    PACKET_PUSH
 
-}DATA_TYPE;
+}data_type;
 
 typedef enum
 {
@@ -157,14 +158,14 @@ typedef struct __attribute__((packed)) Packet_Header
       uint8_t packet_Number;
       uint8_t reserved;
 
-}PACKET_HEADER;
+}packet_header;
 
 typedef struct __attribute__((packed)) Ins_Packet
 {
 	uint8_t serial_no[SIZE_OF_SERIALNUM];
         uint8_t path[4];
 
-}PACKET_INS;
+}packet_ins;
 
 typedef struct
 {
@@ -209,7 +210,7 @@ void storePath( void );
 void sendDataToNextSlave(void);
 bool data_queue_push(uint8_t *in_data, uint16_t in_len);
 bool ping_ins_queue_pop(void);
-void sending_to_server(uint32_t size);
+uint8_t sending_to_server(uint32_t size);
 
 
 
@@ -217,17 +218,17 @@ void sending_to_server(uint32_t size);
  *        VARIABLES
  */
 
-PACKET_HEADER headeer;
-PACKET_INS ins_Packet;
+packet_header headeer;
+packet_ins ins_Packet;
 static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x00, 0x00, 0x00, 0x11, 0x00, 0x00, 0x00);
 
 static nrf_esb_payload_t        rx_payload;
 
-PACKET_INS PATH_ARRAY[INS_PACKET_ARRAY_SIZE];
+packet_ins PATH_ARRAY[INS_PACKET_ARRAY_SIZE];
 uint8_t path_Index = 0;
 uint8_t loop_Index = 0;
 
-uint8_t packet_type = UN_DEFINED;
+uint8_t packet_type = NOT_DEFINED;
 uint8_t RF_EVENT = NOT_DEFINED;
 uint8_t TX_FAIL_FLAG = 0;
 uint8_t volatile Send_Data_To_Nxt_Slave = 0;
@@ -357,7 +358,10 @@ void construct_SERVER_packet( void )
      {
            memcpy( serverBuffer + NEXT_BYTES, (void *)&data_queue[data_queue_tail].data[POS_DATA], totalLength );
 
-           sending_to_server( totalLength );
+           if ( sending_to_server( totalLength ))
+           {
+              NRF_LOG_INFO("Response sent to server")
+           }
            totalLength = 0;
            NEXT_BYTES = 0;
            memset( serverBuffer, 0, sizeof(serverBuffer) );
@@ -449,7 +453,7 @@ void sort_neighbors_by_rssi(neighbor_t *table, int n)
         neighbor_t key = table[i];
         int j = i - 1;
 
-        while (j >= 0 && table[j].rssi < key.rssi)
+        while (j >= 0 && table[j].rssi > key.rssi)
         {
             table[j + 1] = table[j];
             j--;
@@ -458,9 +462,29 @@ void sort_neighbors_by_rssi(neighbor_t *table, int n)
     }
 }
 
+#include <stdio.h>
+
+void print_neighbors(neighbor_t *table, int n)
+{
+    NRF_LOG_INFO("Neighbor Table:\n");
+    NRF_LOG_INFO("-----------------\n");
+
+    for (int i = 0; i < n; i++)
+    {
+        NRF_LOG_INFO("Index %d -> ID: %d, RSSI: %d\n",
+               i,
+               table[i].node_id,
+               table[i].rssi);
+        NRF_LOG_FLUSH();
+    }
+
+    NRF_LOG_INFO("-----------------\n");
+    
+}
+
 void pingPacket( void ) 
 {
-    if ( rx_payload.data[POS_PACKET_TYPE] == PING_PACKET && rx_payload.data[POS_LENGTH] == 0 )
+    if ( rx_payload.data[POS_PACKET_TYPE] == PACKET_PING && rx_payload.data[POS_LENGTH] == 0 )
     {
         memcpy(&advertisment_pcket,rx_payload.data + sizeof(headeer), sizeof(advertisment_pcket));
         if(rx_payload.rssi > 0 && Nxt_table_index < MAX_NEIGHBORS)
@@ -476,25 +500,26 @@ void pingPacket( void )
 void pingNodes( void )
 {
     uint8_t done_rx_start = 0;
+    Nxt_table_index = 0;
 
     for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
     {
           if ( RF_EVENT == NOT_DEFINED || RF_EVENT == TX_FAILED )
           {
                 nrf_esb_stop_rx();
-                nrf_delay_ms(500);
+                nrf_delay_us(50000); 
                 set_slave_adress( neighbour_no , Nxt_Circle_Base_Addr );
                 memset(&headeer,0,sizeof(headeer));
-                headeer.packet_type = PING_PACKET;
+                headeer.packet_type = PACKET_PING;
                 headeer.length = SEND_RESPONSE_FOR_PING;
-               // headeer.circle_array[Current_Circle] = addr_prefix[0];
+               
                 memcpy(tx_payload.data,&headeer,sizeof(headeer));
                 memcpy(tx_payload.data + sizeof(headeer),"HAI",sizeof("HAI"));
                 tx_payload.length = (sizeof(headeer) + sizeof("HAI"));
                 done_rx_start = 1;
                 if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
                 {
-                      nrf_delay_us(50000); 
+                      nrf_delay_us(5000); 
                 }
           }
           if(done_rx_start == 1 && RF_EVENT == TX_SUCCESS)
@@ -509,29 +534,22 @@ void pingNodes( void )
           {                          
               nrf_delay_ms(500);
               pingPacket();
+              ping_ins_queue_pop();
               RF_EVENT = NOT_DEFINED;
           }
     }
-    
+
+    sort_neighbors_by_rssi( Nxt_neighbor_table, Nxt_table_index );
+    Nxt_neighbor  = &Nxt_neighbor_table[0];
+
+    print_neighbors( Nxt_neighbor_table, Nxt_table_index );
+
+
+    nrf_esb_flush_tx();
+    nrf_esb_flush_rx();
+    set_slave_adress( DCU_PREFIX[0] , DCU_BASE_ADDR_0 ); 
+    nrf_esb_start_rx();   
 } 
-
-
-void doDiagnosticTest(void)
-{       
-      Nxt_table_index = 0;
-        
-
-      pingNodes( );
-      sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
-      Nxt_neighbor  = &Nxt_neighbor_table[0];
-
-      nrf_esb_flush_tx();
-      nrf_esb_flush_rx();
-      set_slave_adress( DCU_PREFIX[0] , DCU_BASE_ADDR_0 ); 
-      nrf_esb_start_rx();
-
-
-}
 
 
 #if 0  // for debugging 
@@ -716,6 +734,14 @@ bool data_queue_pop(void)
 
 void Blink_LEDs(void)
 {
+    // Turn OFF all LEDs
+    nrf_gpio_pin_write(LED_1, 1);
+    nrf_gpio_pin_write(LED_2, 1);
+    nrf_gpio_pin_write(LED_3, 1);
+    nrf_gpio_pin_write(LED_4, 1);
+
+     nrf_delay_ms(50);
+
     // Turn ON all LEDs (assuming active LOW)
     nrf_gpio_pin_write(LED_1, 0);
     nrf_gpio_pin_write(LED_2, 0);
@@ -723,14 +749,6 @@ void Blink_LEDs(void)
     nrf_gpio_pin_write(LED_4, 0);
 
     nrf_delay_ms(50);
-
-    // Turn OFF all LEDs
-    nrf_gpio_pin_write(LED_1, 1);
-    nrf_gpio_pin_write(LED_2, 1);
-    nrf_gpio_pin_write(LED_3, 1);
-    nrf_gpio_pin_write(LED_4, 1);
-
-    nrf_delay_ms(200);
 }
 
 
@@ -770,19 +788,19 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                        
                                                    switch ( rx_payload.data[POS_PACKET_TYPE] )
                                                    {
-                                                        case    PING_PACKET :
+                                                        case    PACKET_PING :
                                                                               ping_ins_queue_push(rx_payload.data, rx_payload.length, rx_payload.rssi);
                                                         break;
 
-                                                        case    INS_PACKET  :
+                                                        case    PACKET_INS  :
                                                                               ping_ins_queue_push(rx_payload.data, rx_payload.length, rx_payload.rssi);
                                                         break;
 
-                                                        case    DATA_PACKET :                                                                             
+                                                        case    PACKET_DATA :                                                                             
                                                                               data_queue_push(rx_payload.data, rx_payload.length );
                                                         break;
 
-                                                        case    PUSH_PACKET :
+                                                        case    PACKET_PUSH :
                                                                               data_queue_push(rx_payload.data, rx_payload.length);
                                                         break;
 
@@ -847,7 +865,7 @@ uint32_t esb_init( void )
 
 
 
-void sending_to_server(uint32_t size)
+uint8_t sending_to_server(uint32_t size)
 {
     uint32_t err_code = 0;
 
@@ -873,8 +891,9 @@ void sending_to_server(uint32_t size)
             }
         }
     }
-
+    
     NRF_LOG_FLUSH();
+    return err_code;
 }
 
 
@@ -893,7 +912,7 @@ void uart_event_handle(app_uart_evt_t * p_event)
 
 
         case    APP_UART_COMMUNICATION_ERROR :
-                                               APP_ERROR_HANDLER(p_event->data.error_communication);
+                                               //APP_ERROR_HANDLER(p_event->data.error_communication);
         break;
 
 
@@ -943,7 +962,7 @@ uint8_t insDone = 0;
 uint8_t DiagnosticTest = 0;
 
 int main(void)
-{
+  {
 	ret_code_t err_code;
 
 	struct Packet_Header hdr;
@@ -997,7 +1016,7 @@ int main(void)
               
                 NRF_LOG_FLUSH();
 
-                case      DATA_PACKET : 
+                case      PACKET_DATA : 
                                         if ( data_buf_count != 0 )
                                         {
                                               sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
@@ -1005,17 +1024,19 @@ int main(void)
                                         }
                 break;
 
-                case      PING_PACKET : // do whatever
+                case      PACKET_PING : 
+                                        pingPacket();
+                                        ping_ins_queue_pop();
                 
                 break;
 
-                case      INS_PACKET  : 
+                case      PACKET_INS  : 
                                         storePath();
                                         ping_ins_queue_pop(); 
                                         insDone = 1;                                    
                 break;
 
-                case      PUSH_PACKET :
+                case      PACKET_PUSH :
                                         sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
                                         data_queue_pop();
                 break;
@@ -1024,7 +1045,7 @@ int main(void)
            
            if (DiagnosticTest == 1)
            {
-                doDiagnosticTest();
+                pingNodes();
                 DiagnosticTest = 0;
            }                        
             
@@ -1048,9 +1069,9 @@ int main(void)
                        * Actually this header filling data need to take from UART(GSM)
                        */
                       nrf_esb_stop_rx();
-                      //fillHeader(DATA_PACKET, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
+                      //fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
 
-                      fillHeader(DATA_PACKET, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
+                      fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
                       memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
 
                       //memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
@@ -1061,6 +1082,8 @@ int main(void)
                                 
                       uart_rx_index = 0;
                       sendDataBidirectional( headeer.Direction );
+
+                      NRF_LOG_INFO("Command Sent to Meter");
                   } 
                   insDone = 0;
                   Uart_rx_flag = 0;
