@@ -234,7 +234,7 @@ uint8_t arrays[MAX_CIRCLE][ARRRAY_SIZE] =
 
 uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
 uint8_t base_addr_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
-uint8_t addr_prefix[8] = {0x15};
+uint8_t addr_prefix[8] = {0x10};
 
 uint8_t DCU_BASE[4] = { 0xDC, 0xDC, 0xDC, 0xDC };
 uint8_t DCU_PREFIX[1] = { 0x01 };
@@ -257,7 +257,7 @@ uint8_t volatile Mater_Data_received = 0;
 uint16_t length = 0;
 uint8_t i = 0;
 uint8_t sent_bytes_count = 0;
-uint8_t Current_Circle = 0;
+uint8_t Current_Circle = 1;
 uint8_t uartbuff[2048];
 uint8_t Nxt_table_index;
 uint8_t Prev_table_index;
@@ -807,20 +807,20 @@ void pingPacket(void)
                 memset(&header,0,sizeof(header));
                 header.packet_type = PACKET_PING;
                 header.length = STORE_NODE_INFO;
+              
                 
-                if(ping_ins_queue[ping_ins_queue_tail].data[(POS_CIRCLE_ARRAY + Current_Circle) - 1] != 0 || Current_Circle == 0 ) 
-                {
-                      header.Direction = BACKWORD;
-                }
-                else
+                if(ping_ins_queue[ping_ins_queue_tail].data[(POS_CIRCLE_ARRAY + Current_Circle) + 1] != 0 )
                 {
                       header.Direction = FORWARD;
                 }
+                else
+                {
+                      header.Direction = BACKWORD;
+                }
+          
                 memcpy(tx_payload.data,&header,sizeof(header));
                 memcpy(tx_payload.data + sizeof(header), &advertisment_pcket, sizeof(advertisment_pcket));
                 tx_payload.length = ( sizeof(header) + sizeof( advertisment_pcket ));
-                //check_direction(tx_payload.data);
-                //sendDataBidirectional( tx_payload.data[POS_DIRECTION] );
 
                 nrf_delay_us(50000);
                 nrf_esb_stop_rx();
