@@ -69,6 +69,8 @@ void doDiagnosticTest(void);
 static void diagnostic_tx(uint8_t neighbour, uint8_t circle);
 
 void sendDataBidirectional(uint8_t direction);
+void send_data_to_dcu(uint16_t length);
+void send_INS_packet( void );
 
 
 uint8_t Fwrd_Dirct = 0;
@@ -117,7 +119,7 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 #define     UART_RX_BUF_SIZE                  2048                                         /**< UART RX buffer size. */
 #define     MAX_TRANFERSIZE                   252 
 #define     DATA_SIZE                         ( MAX_TRANFERSIZE- PACKET_HEADER_SIZE )
-#define     FAIL_COUNT                        3
+#define     FAIL_COUNT                        2
 
 
 typedef enum 
@@ -234,7 +236,7 @@ uint8_t arrays[MAX_CIRCLE][ARRRAY_SIZE] =
 
 uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
 uint8_t base_addr_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
-uint8_t addr_prefix[8] = {0x10};
+uint8_t addr_prefix[8] = {0x20};
 
 uint8_t DCU_BASE[4] = { 0xDC, 0xDC, 0xDC, 0xDC };
 uint8_t DCU_PREFIX[1] = { 0x01 };
@@ -260,7 +262,7 @@ uint8_t sent_bytes_count = 0;
 uint8_t Current_Circle = 1;
 uint8_t uartbuff[2048];
 uint8_t Nxt_table_index;
-uint8_t Prev_table_index;
+uint8_t Prev_table_index = 0;
 uint8_t neighbour_no;
 uint8_t sendINS = 0; 
 uint8_t RF_EVENT = NOT_DEFINED;
@@ -617,13 +619,7 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                         }
                                         else
                                         {   
-                                            tx_fail_count--;
-                                            if ( tx_fail_count == 0 )
-                                            {
-                                                 reRouting(); 
-                                                 tx_fail_count = FAIL_COUNT;
-                                            }
-                                           
+                                            reRouting(); 
                                         }
                                         
 
@@ -871,12 +867,13 @@ uint32_t esb_init( void )
 
     nrf_esb_config_t nrf_esb_config         = NRF_ESB_DEFAULT_CONFIG;
     nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
-    nrf_esb_config.retransmit_count         = 1;
+    nrf_esb_config.retransmit_count         = 3;
     nrf_esb_config.retransmit_delay         = 600;
     nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_2MBPS;
     nrf_esb_config.event_handler            = nrf_esb_event_handler;
     nrf_esb_config.mode                     = NRF_ESB_MODE_PTX;
     nrf_esb_config.selective_auto_ack       = false;
+    //nrf_esb_config.retransmit_count     
 
 
     err_code = nrf_esb_init(&nrf_esb_config);
@@ -1114,23 +1111,17 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
 
 void sendDataToNextSlave(void)
 {
-       
-       
-        //nrf_esb_stop_rx();
         
-        if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
-        {
-              nrf_delay_us(50000); //to send the data 
-              set_slave_adress(addr_prefix[0],arrays[Current_Circle]);
-              nrf_esb_start_rx();
-        }
-        else
-        {
-               NRF_LOG_INFO("FAILED to send the data");
-        }
-
-        
-       
+      if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
+      {
+            nrf_delay_us(50000); 
+            set_slave_adress(addr_prefix[0],arrays[Current_Circle]);
+            nrf_esb_start_rx();
+      }
+      else
+      {
+             NRF_LOG_INFO("FAILED to send the data");
+      }     
 }
 
 
@@ -1251,6 +1242,34 @@ void send_data_to_dcu(uint16_t length)
 	}
         uart_rx_index = 0;
         data_queue_pop();
+}
+
+void send_INS_packet( void )
+{
+    sendINS = 0;
+    nrf_esb_stop_rx();
+
+    memset(&header, 0, PACKET_HEADER_SIZE);
+    memset( &tx_payload, 0, sizeof(rx_payload) );
+    
+    header.packet_type      =     PACKET_INS;
+    header.Direction        =     BACKWORD;
+    header.circle_array[Current_Circle] = addr_prefix[0];
+
+
+    memcpy(tx_payload.data, &header, sizeof(header));
+    memcpy(tx_payload.data + sizeof(header), "01000001",sizeof("01000001"));
+    tx_payload.length = ( sizeof(header) + sizeof("01000001") );
+    
+
+    if ( Current_Circle == CIRCLE_0 )
+          set_slave_adress(DCU_PREFIX[0], DCU_BASE); 
+    else
+          set_slave_adress( Prev_neighbor->node_id, arrays[Current_Circle - 1] ); 
+
+    
+
+    sendDataToNextSlave();
 }
 
 uint8_t pushTimeOut = 1;
@@ -1377,30 +1396,7 @@ void main(void)
 
         if ( sendINS == 1 )
         {
-
-            sendINS = 0;
-            nrf_esb_stop_rx();
-
-            memset(&header, 0, PACKET_HEADER_SIZE);
-            
-            header.packet_type      =     PACKET_INS;
-            header.Direction        =     BACKWORD;
-            header.circle_array[Current_Circle] = addr_prefix[0];
-
-  
-            memcpy(tx_payload.data, &header, sizeof(header));
-            memcpy(tx_payload.data + sizeof(header), "01000001",sizeof("01000001"));
-            tx_payload.length = ( sizeof(header) + sizeof("01000001") );
-            
-
-            if ( Current_Circle == CIRCLE_0 )
-                  set_slave_adress(DCU_PREFIX[0], DCU_BASE); 
-            else
-                  set_slave_adress(Prev_neighbor_table[0].node_id, arrays[Current_Circle - 1]); 
-
-            
-
-            sendDataToNextSlave();
+            send_INS_packet();
         }
 
         if( Uart_rx_flag == 1 )

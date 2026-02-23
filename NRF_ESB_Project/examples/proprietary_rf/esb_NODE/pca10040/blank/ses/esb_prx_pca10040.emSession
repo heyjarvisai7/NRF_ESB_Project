@@ -3,9 +3,9 @@
  <Bookmarks/>
  <Breakpoints groups="Breakpoints" active_group="Breakpoints">
   <BreakpointListItem trigger="" line="109" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="3" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="391" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="397" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="602" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="2" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="412" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="418" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="623" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="2" filename="../../../main.c" useHWbreakpoint="false"/>
   <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
  </Breakpoints>
  <ExecutionProfileWindow/>
@@ -67,7 +67,7 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1391" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="1376" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="85" y="822" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="784" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="2" y="80" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/include/app_uart.h" left="0" top="61" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="84" y="114" useTextEdit="1" path="../../../../../../modules/nrfx/hal/nrf_uarte.h" left="0" top="95" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="39" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_backend_uart.c" left="0" top="25" codecName="Default"/>
@@ -80,5 +80,5 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="8" y="160" useTextEdit="1" path="../../../../../../components/libraries/util/app_error.h" left="0" top="140" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="728" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_frontend.c" left="0" top="725" codecName="Default"/>
  </Files>
- <EMStudioWindow activeProject="esb_prx_pca10040" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3199"/>
+ <EMStudioWindow activeProject="esb_prx_pca10040" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

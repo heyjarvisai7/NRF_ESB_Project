@@ -142,6 +142,12 @@ typedef enum
     
 }mode;
 
+typedef enum
+{
+    FALSE,
+    TRUE
+}condition;
+
 
 
 /*
@@ -163,7 +169,7 @@ typedef struct __attribute__((packed)) Packet_Header
 typedef struct __attribute__((packed)) Ins_Packet
 {
 	uint8_t serial_no[SIZE_OF_SERIALNUM];
-        uint8_t path[4];
+        uint8_t path[MAX_CIRCLE];
 
 }packet_ins;
 
@@ -211,6 +217,7 @@ void sendDataToNextSlave(void);
 bool data_queue_push(uint8_t *in_data, uint16_t in_len);
 bool ping_ins_queue_pop(void);
 uint8_t sending_to_server(uint32_t size);
+void updatepath(void);
 
 
 
@@ -380,7 +387,7 @@ void sendDataBidirectional(uint8_t direction)
          */
 
         nrf_delay_us(50000); //to send the data 
-        set_slave_adress(PATH_ARRAY[0].path[0], Nxt_Circle_Base_Addr);
+        set_slave_adress(PATH_ARRAY[loop_Index].path[0], Nxt_Circle_Base_Addr);
         //set_slave_adress( headeer.circle_array[0], Nxt_Circle_Base_Addr );
         sendDataToNextSlave();
     }
@@ -957,6 +964,39 @@ static void uart_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
+void updatepath(void)
+{
+    uint8_t circle_no = 0;
+    uint8_t node_id   = 0;
+
+    volatile rx_packet_t *pkt =   &data_queue[data_queue_tail];
+    uint8_t *circle_array     =   (uint8_t *)&pkt->data[POS_CIRCLE_ARRAY];
+
+    
+    for (int8_t index = 3; index >= 0; index--)
+    {
+        if (circle_array[index] != 0)
+        {
+            circle_no = index;
+            node_id   = circle_array[index];
+            break;
+        }
+    }
+
+  
+    if (node_id > 0)
+    {
+        for (uint8_t index = 0; index < INS_PACKET_ARRAY_SIZE; index++)
+        {
+            if (PATH_ARRAY[index].path[circle_no] == node_id)
+            {
+                memset( PATH_ARRAY[index].path, 0, MAX_CIRCLE );
+                memcpy( PATH_ARRAY[index].path, circle_array, MAX_CIRCLE );
+            }
+        }
+    }
+}
+
 
 uint8_t insDone = 0;
 uint8_t DiagnosticTest = 0;
@@ -1019,6 +1059,11 @@ int main(void)
                 case      PACKET_DATA : 
                                         if ( data_buf_count != 0 )
                                         {
+                                              if ( data_queue[data_queue_tail].data[POS_DIRTY_FLAG] == TRUE )
+                                              {
+                                                  updatepath();
+                                                  NRF_LOG_INFO("PATH UPDATED");
+                                              }
                                               sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
                                               data_queue_pop();
                                         }
