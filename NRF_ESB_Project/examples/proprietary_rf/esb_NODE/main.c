@@ -665,30 +665,30 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
     }
 }
 
-void reRouting(void)
-{
-      tx_payload.data[POS_DIRTY_FLAG] = 1;
+  void reRouting(void)
+  {
+        tx_payload.data[POS_DIRTY_FLAG] = 1;
    
-       if(tx_payload.data[POS_DIRECTION] == FORWARD)
-       {
-          if(Nxt_neighbor < &Nxt_neighbor_table[MAX_NEIGHBORS]) 
-          {
-             Nxt_neighbor++;
-             if(Nxt_neighbor->node_id == 0)
-             {
-                Nxt_neighbor = &Nxt_neighbor_table[0];
-             }
-          }
-          else
-          {
-             Nxt_neighbor = &Nxt_neighbor_table[0];
-          }
-          tx_payload.data[POS_CIRCLE_ARRAY+ Current_Circle + 1] = Nxt_neighbor->node_id;
+         if(tx_payload.data[POS_DIRECTION] == FORWARD)
+         {
+            if(Nxt_neighbor < &Nxt_neighbor_table[MAX_NEIGHBORS]) 
+            {
+               Nxt_neighbor++;
+               if(Nxt_neighbor->node_id == 0)
+               {
+                  Nxt_neighbor = &Nxt_neighbor_table[0];
+               }
+            }
+            else
+            {
+               Nxt_neighbor = &Nxt_neighbor_table[0];
+            }
+            tx_payload.data[POS_CIRCLE_ARRAY+ Current_Circle + 1] = Nxt_neighbor->node_id;
  
-          set_slave_adress(Nxt_neighbor->node_id, arrays[Current_Circle + 1]);
-          sendDataToNextSlave();         
+            set_slave_adress(Nxt_neighbor->node_id, arrays[Current_Circle + 1]);
+            sendDataToNextSlave();         
     
-       }
+         }
  
        else
        {

@@ -559,6 +559,32 @@ void pingNodes( void )
 } 
 
 
+void reRouting(void)
+{
+      tx_payload.data[POS_DIRTY_FLAG] = 1;
+   
+       if(tx_payload.data[POS_DIRECTION] == FORWARD)
+       {
+          if(Nxt_neighbor < &Nxt_neighbor_table[MAX_NEIGHBORS]) 
+          {
+             Nxt_neighbor++;
+             if(Nxt_neighbor->node_id == 0)
+             {
+                Nxt_neighbor = &Nxt_neighbor_table[0];
+             }
+          }
+          else
+          {
+             Nxt_neighbor = &Nxt_neighbor_table[0];
+          }
+          tx_payload.data[POS_CIRCLE_ARRAY] = Nxt_neighbor->node_id;
+ 
+          set_slave_adress(Nxt_neighbor->node_id, Nxt_Circle_Base_Addr);
+          sendDataToNextSlave();         
+    
+       }
+}
+
 #if 0  // for debugging 
 
 bool data_queue_push(uint8_t *in_data, uint16_t in_len)
@@ -761,6 +787,8 @@ void Blink_LEDs(void)
 
 
 
+
+
 void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 {
 	switch (p_event->evt_id)
@@ -779,7 +807,14 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                                 NRF_LOG_DEBUG("TX FAILED EVENT");
                                                 NRF_LOG_FLUSH();                
                       
-                                                neighbour_no++;
+                                                if(tx_payload.data[POS_PACKET_TYPE] == PACKET_PING)
+                                                {
+                                                      neighbour_no++;
+                                                }
+                                                else
+                                                {   
+                                                      reRouting(); 
+                                                }
 
               break;
 
