@@ -56,6 +56,7 @@
 
 #include "app_uart.h"
 #include "nrfx_uarte.h"
+#include "app_timer.h"
 
 
 void pingPacket(void);
@@ -613,11 +614,11 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                         NRF_LOG_FLUSH();
                                         RF_EVENT = TX_FAILED;
 
-                                        if(tx_payload.data[POS_PACKET_TYPE] == PACKET_PING)
+                                        if( tx_payload.data[POS_PACKET_TYPE] == PACKET_PING )
                                         {
                                            neighbour_no++;
                                         }
-                                        else
+                                        else if ( tx_payload.data[POS_PACKET_TYPE] == PACKET_DATA || tx_payload.data[POS_PACKET_TYPE] == PACKET_PUSH )
                                         {   
                                             reRouting(); 
                                         }
@@ -637,23 +638,19 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                              switch ( rx_payload.data[POS_PACKET_TYPE] )
                                              {
                                                   case    PACKET_PING :
-                                                                        //packet_type   =   PACKET_PING;
                                                                         ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
 
                                                   break;
 
-                                                  case    PACKET_INS  :
-                                                                        //packet_type   =   PACKET_INS;
+                                                  case    PACKET_INS  :                                                                     
                                                                         ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
                                                   break;
 
-                                                  case    PACKET_DATA :
-                                                                        //packet_type   =    PACKET_DATA;   
+                                                  case    PACKET_DATA :   
                                                                         data_queue_push( rx_payload.data, rx_payload.length );
                                                   break;
 
-                                                  case    PACKET_PUSH :
-                                                                        //packet_type   =    PACKET_PUSH;
+                                                  case    PACKET_PUSH :                        
                                                                         data_queue_push( rx_payload.data, rx_payload.length );
                                                   break;
                                              }
@@ -687,7 +684,6 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
  
             set_slave_adress(Nxt_neighbor->node_id, arrays[Current_Circle + 1]);
             sendDataToNextSlave();         
-    
          }
  
        else
@@ -1267,13 +1263,15 @@ void send_INS_packet( void )
     else
           set_slave_adress( Prev_neighbor->node_id, arrays[Current_Circle - 1] ); 
 
-    
-
     sendDataToNextSlave();
 }
 
+
+
 uint8_t pushTimeOut = 1;
 uint8_t  open_request1[20] = {0x7E, 0xA0, 0x07, 0x03,0x21, 0x93, 0x0F, 0x01, 0x7E};
+
+
 
 void main(void)
 {
@@ -1304,6 +1302,8 @@ void main(void)
     err_code = nrf_esb_start_rx();
     APP_ERROR_CHECK(err_code);
     NRF_LOG_FLUSH();
+
+    
   
     while(true)
     {

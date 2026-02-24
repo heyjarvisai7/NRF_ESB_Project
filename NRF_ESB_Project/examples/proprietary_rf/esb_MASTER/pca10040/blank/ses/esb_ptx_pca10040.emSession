@@ -67,7 +67,7 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1039" useTextEdit="1" path="../../../main.c" left="0" top="1025" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="14" y="1038" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="1025" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="75" y="56" useTextEdit="1" path="C:/Program Files/SEGGER/SEGGER Embedded Studio 8.24/include/string.h" left="0" top="46" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="58" y="67" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/nrf_drv_timer.h" left="0" top="57" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="4" y="78" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/include/nrfx_timer.h" left="0" top="68" codecName="Default"/>
@@ -91,7 +91,7 @@
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="103" useTextEdit="1" path="../../../../../../components/libraries/util/app_error_weak.c" left="0" top="87" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="75" useTextEdit="1" path="../../../../../../components/libraries/util/app_util_platform.c" left="0" top="68" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="374" useTextEdit="1" path="C:/Program Files/SEGGER/SEGGER Embedded Studio 8.24/source/thumb_crt0.s" left="0" top="367" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="71" useTextEdit="1" path="../../../../../../modules/nrfx/mdk/ses_startup_nrf52.s" left="0" selected="1" top="57" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="71" useTextEdit="1" path="../../../../../../modules/nrfx/mdk/ses_startup_nrf52.s" left="0" top="57" codecName="Default"/>
  </Files>
  <EMStudioWindow activeProject="esb_ptx_pca10040" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="D:/GIT/MAIN/NRF_ESB_Project/components/libraries/uart" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

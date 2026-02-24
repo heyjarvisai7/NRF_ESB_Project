@@ -40,7 +40,7 @@
 
 #include <nrfx.h>
 #include <nrf_delay.h>
-#include <drv_rtc.h>
+#include "drv_rtc.h"
 
 /* Module is integral part of app_timer implementation. */
 #define NRF_LOG_MODULE_NAME app_timer
