@@ -121,6 +121,7 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 #define     MAX_TRANFERSIZE                   252 
 #define     DATA_SIZE                         ( MAX_TRANFERSIZE- PACKET_HEADER_SIZE )
 #define     FAIL_COUNT                        2
+#define     NODE_NOT_FOUND                    0
 
 
 typedef enum 
@@ -142,9 +143,11 @@ typedef enum
 
 typedef enum
 {
+    EVENT_NOT_DEFINED=0,
     TX_SUCCESS = 1,
     TX_FAILED,
-    RX_SUCCESS
+    RX_SUCCESS,
+    RX_FAILED
 
 }rf_event;
 
@@ -163,6 +166,12 @@ typedef enum
     CIRCLE_3
     
 } circle_no;
+
+typedef enum
+{
+    FALSE,
+    TRUE
+}condition;
 
 
 
@@ -260,7 +269,7 @@ uint8_t volatile Mater_Data_received = 0;
 uint16_t length = 0;
 uint8_t i = 0;
 uint8_t sent_bytes_count = 0;
-uint8_t Current_Circle = 1;
+uint8_t Current_Circle =  0;
 uint8_t uartbuff[2048];
 uint8_t Nxt_table_index;
 uint8_t Prev_table_index = 0;
@@ -275,7 +284,9 @@ uint8_t tx_fail_count = FAIL_COUNT;
 struct Packet_Header header;
 neighbor_t *Nxt_neighbor = &Nxt_neighbor_table[0];
 neighbor_t *Prev_neighbor = &Prev_neighbor_table[0];
+#include "nrf_drv_timer.h"
 
+static const nrf_drv_timer_t m_timer = NRF_DRV_TIMER_INSTANCE(1);
 
 
 void sort_neighbors_by_rssi(neighbor_t *table, int n)
@@ -612,16 +623,16 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
         case NRF_ESB_EVENT_TX_FAILED:
                                         NRF_LOG_DEBUG("TX FAILED EVENT");
                                         NRF_LOG_FLUSH();
-                                        RF_EVENT = TX_FAILED;
-
+                                     
                                         if( tx_payload.data[POS_PACKET_TYPE] == PACKET_PING )
                                         {
                                            neighbour_no++;
                                         }
-                                        else if ( tx_payload.data[POS_PACKET_TYPE] == PACKET_DATA || tx_payload.data[POS_PACKET_TYPE] == PACKET_PUSH )
+                                        else 
                                         {   
                                             reRouting(); 
                                         }
+                                        RF_EVENT = TX_FAILED;
                                         
 
         break;
@@ -629,34 +640,30 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
         case NRF_ESB_EVENT_RX_RECEIVED:
                                         if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                                         {
-
-                                             /*Need to store in comming packets*/
-                        
                                              RF_EVENT = RX_SUCCESS;  
                                              Blink_LEDs();                    
 
                                              switch ( rx_payload.data[POS_PACKET_TYPE] )
                                              {
                                                   case    PACKET_PING :
+                                                  case    PACKET_INS  :
                                                                         ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
 
                                                   break;
 
-                                                  case    PACKET_INS  :                                                                     
-                                                                        ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
-                                                  break;
-
-                                                  case    PACKET_DATA :   
-                                                                        data_queue_push( rx_payload.data, rx_payload.length );
-                                                  break;
-
-                                                  case    PACKET_PUSH :                        
+                                                  case    PACKET_DATA : 
+                                                  case    PACKET_PUSH :
                                                                         data_queue_push( rx_payload.data, rx_payload.length );
                                                   break;
                                              }
                                              NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
                      
-                                        }  
+                                        } else {
+                                        
+                                              RF_EVENT = RX_FAILED;
+                                              NRF_LOG_ERROR("Ooops rx_Failed ... ");
+                                              /* OOOPs we should not get this code execute */
+                                        } 
 
           break;
     }
@@ -664,34 +671,34 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
   void reRouting(void)
   {
-        tx_payload.data[POS_DIRTY_FLAG] = 1;
+       tx_payload.data[POS_DIRTY_FLAG] = TRUE;
    
-         if(tx_payload.data[POS_DIRECTION] == FORWARD)
-         {
-            if(Nxt_neighbor < &Nxt_neighbor_table[MAX_NEIGHBORS]) 
-            {
-               Nxt_neighbor++;
-               if(Nxt_neighbor->node_id == 0)
-               {
-                  Nxt_neighbor = &Nxt_neighbor_table[0];
-               }
-            }
-            else
-            {
-               Nxt_neighbor = &Nxt_neighbor_table[0];
-            }
-            tx_payload.data[POS_CIRCLE_ARRAY+ Current_Circle + 1] = Nxt_neighbor->node_id;
- 
-            set_slave_adress(Nxt_neighbor->node_id, arrays[Current_Circle + 1]);
-            sendDataToNextSlave();         
-         }
+       if(tx_payload.data[POS_DIRECTION] == FORWARD)
+       {
+          if(Nxt_neighbor < &Nxt_neighbor_table[MAX_NEIGHBORS]) 
+          {
+             Nxt_neighbor++;
+             if(Nxt_neighbor->node_id == NODE_NOT_FOUND)
+             {
+                Nxt_neighbor = &Nxt_neighbor_table[0];
+             }
+          }
+          else
+          {
+             Nxt_neighbor = &Nxt_neighbor_table[0];
+          }
+          tx_payload.data[POS_CIRCLE_ARRAY+ Current_Circle + 1] = Nxt_neighbor->node_id;
+
+          set_slave_adress(Nxt_neighbor->node_id, arrays[Current_Circle + 1]);
+          sendDataToNextSlave();         
+       }
  
        else
        {
           if(Prev_neighbor < &Prev_neighbor_table[MAX_NEIGHBORS]) 
           {
              Prev_neighbor++;
-             if(Prev_neighbor->node_id == 0)
+             if(Prev_neighbor->node_id == NODE_NOT_FOUND)
              {
                 Prev_neighbor = &Prev_neighbor_table[0];
              }
@@ -916,7 +923,7 @@ static void pingNodes( uint8_t circle )
 
     for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
     {
-          if ( RF_EVENT == NOT_DEFINED || RF_EVENT == TX_FAILED )
+          if ( RF_EVENT == EVENT_NOT_DEFINED || RF_EVENT == TX_FAILED )
           {
                 nrf_esb_stop_rx();
                 //nrf_delay_ms(500);
@@ -947,7 +954,7 @@ static void pingNodes( uint8_t circle )
               nrf_delay_ms(500);
               pingPacket();
               ping_ins_queue_pop();
-              RF_EVENT = NOT_DEFINED;
+              RF_EVENT = EVENT_NOT_DEFINED;
           }
     }
 } 
@@ -957,6 +964,7 @@ void doDiagnosticTest(void)
 {       
       Nxt_table_index  = 0;
       Prev_table_index = 0;
+      neighbour_no = 0; // Start from first node to verify */
     
       if (Current_Circle == MIN_CIRCLE)
       {
@@ -1148,7 +1156,8 @@ void uart_event_handle(app_uart_evt_t * p_event)
 
             
         default:
-            break;
+
+        break;
     }
 }
 
@@ -1158,17 +1167,17 @@ static void uart_init(void)
 
     app_uart_comm_params_t const comm_params =
     {
-                                                .rx_pin_no    = RX_PIN_NUMBER,
-                                                .tx_pin_no    = TX_PIN_NUMBER,
-                                                .rts_pin_no   = RTS_PIN_NUMBER,
-                                                .cts_pin_no   = CTS_PIN_NUMBER,
-                                                .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-                                                .use_parity   = false,
-                                        #if defined (UART_PRESENT)
-                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
-                                        #else
-                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
-                                        #endif
+                            .rx_pin_no    = RX_PIN_NUMBER,
+                            .tx_pin_no    = TX_PIN_NUMBER,
+                            .rts_pin_no   = RTS_PIN_NUMBER,
+                            .cts_pin_no   = CTS_PIN_NUMBER,
+                            .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+                            .use_parity   = false,
+                    #if defined (UART_PRESENT)
+                            .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                    #else
+                            .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                    #endif
     };
 
 
@@ -1183,11 +1192,13 @@ static void uart_init(void)
 }
 
 
-uint8_t sending_data[252];
+
 
 void send_data_to_dcu(uint16_t length)
 {
       uint32_t err_code;
+
+      uint8_t sending_data[252];
 
       uint16_t sent_bytes_count = 0;
       uint16_t length1 = length;
@@ -1267,9 +1278,17 @@ void send_INS_packet( void )
 }
 
 
+static void timers_init(void)
+{
+    ret_code_t err_code = app_timer_init();
+    APP_ERROR_CHECK(err_code);
+}
+
 
 uint8_t pushTimeOut = 1;
 uint8_t  open_request1[20] = {0x7E, 0xA0, 0x07, 0x03,0x21, 0x93, 0x0F, 0x01, 0x7E};
+
+
 
 
 
@@ -1288,6 +1307,7 @@ void main(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     clocks_start();
+    timers_init();
 
      
     err_code = esb_init();
@@ -1310,22 +1330,22 @@ void main(void)
   
         NRF_LOG_FLUSH();
 
+
+        /* Find out the Next Packet type from Queues */
+        packet_type = NOT_DEFINED;
+
+        /* Ping and INstalation packetes are given High priority */
         if ( ping_ins_buf_count > 0 )
         {
             packet_type = ping_ins_queue[ping_ins_queue_tail].data[POS_PACKET_TYPE];
         }
-        else
+        else if ( data_buf_count > 0 )
         {
-            if ( data_buf_count > 0 )
-            {
-                packet_type = data_queue[data_queue_tail].data[POS_PACKET_TYPE];
-            }
-            else
-            {
-                packet_type = NOT_DEFINED;
-            }
+            packet_type = data_queue[data_queue_tail].data[POS_PACKET_TYPE];
         }
-
+        
+        
+        
         switch ( packet_type )
         {
             case    PACKET_DATA  :
@@ -1363,28 +1383,30 @@ void main(void)
                                         }
                                    }
                                    
-            break;
+                                   break;
 
+            case    PACKET_PUSH :
+                                  fillPacket( data_queue[data_queue_tail].data[POS_DIRECTION], rx_payload.data, rx_payload.length );
+                                  data_queue_pop();
+                                  
+                                  break;
 
             case    PACKET_PING : 
                                   pingPacket();
                                   ping_ins_queue_pop();
                                   
-            break;
+                                  break;
 
 
             case    PACKET_INS :      
                                   fillPacket( rx_payload.data[POS_DIRECTION], rx_payload.data, rx_payload.length );
                                   ping_ins_queue_pop();
                                   
-            break; 
+                                  break; 
 
 
-            case    PACKET_PUSH :
-                                  fillPacket( data_queue[data_queue_tail].data[POS_DIRECTION], rx_payload.data, rx_payload.length );
-                                  data_queue_pop();
-                                  
-            break;
+           default:
+                    /* Do nothing */
 
         }
 
@@ -1409,7 +1431,8 @@ void main(void)
           Uart_rx_flag = 0;
         }
 
-
+/* Testing code */
+#if 1
         if ( pushTimeOut == 0 )
         {
 
@@ -1428,7 +1451,7 @@ void main(void)
             Uart_rx_flag = 0;
             pushTimeOut = 1;
         }
-
+#endif // Testing 
 
     }
   

@@ -2,9 +2,9 @@
 <session>
  <Bookmarks/>
  <Breakpoints groups="Breakpoints" active_group="Breakpoints">
-  <BreakpointListItem trigger="" line="111" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="3" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="414" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
-  <BreakpointListItem trigger="" line="420" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="112" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="3" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="426" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="432" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
   <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
  </Breakpoints>
  <ExecutionProfileWindow/>
@@ -66,18 +66,27 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="1" y="686" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="664" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="297" useTextEdit="1" path="../../../main.c" left="0" top="277" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="2" y="80" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/include/app_uart.h" left="0" top="61" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="84" y="114" useTextEdit="1" path="../../../../../../modules/nrfx/hal/nrf_uarte.h" left="0" top="95" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="39" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_backend_uart.c" left="0" top="25" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="0" useTextEdit="1" path="../../../../../../components/libraries/uart/app_uart.c" left="0" top="33" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="8" y="167" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/nrf_drv_uart.h" left="0" top="148" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="28" y="721" useTextEdit="1" path="../config/sdk_config.h" left="0" top="714" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="27731" useTextEdit="1" path="../config/sdk_config.h" left="0" top="27712" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="376" useTextEdit="1" path="C:/Program Files/SEGGER/SEGGER Embedded Studio 8.24/source/thumb_crt0.s" left="0" top="357" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="8" y="80" useTextEdit="1" path="../../../../../../components/libraries/log/nrf_log_ctrl.h" left="0" top="63" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="109" useTextEdit="1" path="../../../../../../modules/nrfx/mdk/ses_startup_nrf_common.s" left="0" top="102" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="8" y="160" useTextEdit="1" path="../../../../../../components/libraries/util/app_error.h" left="0" top="140" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="728" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_frontend.c" left="0" top="725" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="10" y="42" useTextEdit="1" path="../../../../../../components/libraries/timer/drv_rtc.c" left="0" top="66" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="8" y="88" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/nrfx_common.h" left="0" top="74" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="38" y="71" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/include/nrfx_timer.h" left="0" top="52" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="21" y="110" useTextEdit="1" path="../../../../../../components/libraries/log/nrf_log.h" left="0" top="89" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="45" y="92" useTextEdit="1" path="../../../../../../components/libraries/timer/drv_rtc.h" left="0" top="80" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="50" y="74" useTextEdit="1" path="../../../../../../components/libraries/timer/app_timer2.c" left="0" selected="1" top="55" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="133" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/include/app_timer.h" left="0" top="103" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="31" y="190" useTextEdit="1" path="../../../../../../components/libraries/util/app_util.h" left="0" top="175" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="68" useTextEdit="1" path="../../../../../../components/libraries/timer/app_timer.h" left="0" top="67" codecName="Default"/>
  </Files>
- <EMStudioWindow activeProject="esb_prx_pca10040" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="" debugSearchPath="" autoConnectCapabilities="3711"/>
+ <EMStudioWindow activeProject="esb_prx_pca10040" fileDialogDefaultFilter="*.c" autoConnectTarget="J-Link" buildConfiguration="Debug" sessionSettings="" debugSearchFileMap="" fileDialogInitialDirectory="D:/GIT/MAIN/NRF_ESB_Project/components/libraries/timer" debugSearchPath="" autoConnectCapabilities="3711"/>
 </session>

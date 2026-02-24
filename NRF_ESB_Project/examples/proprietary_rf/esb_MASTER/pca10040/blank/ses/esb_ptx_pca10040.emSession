@@ -2,7 +2,7 @@
 <session>
  <Bookmarks/>
  <Breakpoints groups="Breakpoints" active_group="Breakpoints">
-  <BreakpointListItem trigger="" line="596" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
+  <BreakpointListItem trigger="" line="599" counter="0" hardwareBreakpoint="" isFunctionBreakpoint="false" action="" expression="" stopAll="false" group="Breakpoints" type="Breakpoint" state="4" filename="../../../main.c" useHWbreakpoint="false"/>
   <Exceptions set="MemManage;UsageFault_Coprocessor;UsageFault_CheckingError;UsageFault_StateError;BusFault;ExceptionEntryReturnFault;HardFault"/>
  </Breakpoints>
  <ExecutionProfileWindow/>
@@ -67,17 +67,17 @@
   <Watches active="0" update="Never"/>
  </Watch4>
  <Files>
-  <SessionOpenFile windowGroup="DockEditLeft" x="14" y="1038" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="1025" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="12" y="454" useTextEdit="1" path="../../../main.c" left="0" selected="1" top="404" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="75" y="56" useTextEdit="1" path="C:/Program Files/SEGGER/SEGGER Embedded Studio 8.24/include/string.h" left="0" top="46" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="58" y="67" useTextEdit="1" path="../../../../../../integration/nrfx/legacy/nrf_drv_timer.h" left="0" top="57" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="4" y="78" useTextEdit="1" path="../../../../../../modules/nrfx/drivers/include/nrfx_timer.h" left="0" top="68" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="15710" useTextEdit="1" path="../config/sdk_config.h" left="0" top="15680" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="515" useTextEdit="1" path="../../../../../../modules/nrfx/hal/nrf_gpio.h" left="0" top="505" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="1126" useTextEdit="1" path="../../../../../../components/proprietary_rf/esb/nrf_esb.c" left="0" top="1116" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="10" y="1253" useTextEdit="1" path="../../../../../../components/proprietary_rf/esb/nrf_esb.c" left="0" top="1231" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="109" useTextEdit="1" path="../../../../../../modules/nrfx/mdk/ses_startup_nrf_common.s" left="0" top="104" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="20" y="68" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_backend_serial.c" left="0" top="58" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="8" y="404" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_internal.h" left="0" top="395" codecName="Default"/>
-  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="728" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_frontend.c" left="0" top="728" codecName="Default"/>
+  <SessionOpenFile windowGroup="DockEditLeft" x="0" y="923" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_frontend.c" left="0" top="909" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="209" useTextEdit="1" path="../../../../../../components/toolchain/cmsis/include/cmsis_gcc.h" left="0" top="200" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="208" useTextEdit="1" path="../../../../../../components/boards/boards.c" left="0" top="198" codecName="Default"/>
   <SessionOpenFile windowGroup="DockEditLeft" x="0" y="84" useTextEdit="1" path="../../../../../../components/libraries/log/src/nrf_log_backend_uart.c" left="0" top="75" codecName="Default"/>

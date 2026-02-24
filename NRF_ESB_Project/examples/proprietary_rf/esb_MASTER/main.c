@@ -416,6 +416,7 @@ void sendDataToNextSlave(void)
             set_slave_adress( DCU_PREFIX[0], DCU_BASE_ADDR_0 ); // DCU lisitining
             nrf_esb_start_rx();
       }
+      #if 0
       if ( RF_EVENT == TX_FAILED )
       {
              NRF_LOG_INFO("FAILED to send the data");
@@ -424,7 +425,7 @@ void sendDataToNextSlave(void)
               * Here we can do rerouting also, we can send the data to next circle active node
               */
 
-             if( loop_Index == ( INS_PACKET_ARRAY_SIZE - 1 ) ) 
+             if( loop_Index >= ( INS_PACKET_ARRAY_SIZE - 1 ) ) 
              {
                   loop_Index = 0;                 
              }
@@ -449,7 +450,9 @@ void sendDataToNextSlave(void)
 
                    
              }
+             
       }
+      #endif
 }
 
 
@@ -1092,7 +1095,6 @@ int main(void) {
                                               {
                                                   updatepath();
                                                   NRF_LOG_INFO("PATH UPDATED");
-
                                               }
                                               sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
                                               data_queue_pop();
@@ -1144,16 +1146,16 @@ int main(void) {
                        * Actually this header filling data need to take from UART(GSM)
                        */
                       nrf_esb_stop_rx();
-                      //fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
+                      fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
 
-                      fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
+                      //fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
                       memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
 
-                      //memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
-                      //tx_payload.length = ( PACKET_HEADER_SIZE + (open_request1[2] + 2));
+                      memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
+                      tx_payload.length = ( PACKET_HEADER_SIZE + (open_request1[2] + 2));
 
-                      memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
-                      tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);    
+                      //memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
+                      //tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);    
                                 
                       uart_rx_index = 0;
                       sendDataBidirectional( headeer.Direction );
