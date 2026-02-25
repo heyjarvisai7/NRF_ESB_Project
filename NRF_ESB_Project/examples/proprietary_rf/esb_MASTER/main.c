@@ -119,7 +119,7 @@ typedef enum
 
 typedef enum 
 {
-    NOT_DEFINED,
+    PACKET_NOT_DEFINED,
     PACKET_DATA,
     PACKET_PING,
     PACKET_INS,
@@ -129,9 +129,11 @@ typedef enum
 
 typedef enum
 {
-    TX_SUCCESS = 1,
-    TX_FAILED,
-    RX_SUCCESS
+    EVENT_NOT_DEFINED,
+    EVENT_TX_SUCCESS,
+    EVENT_TX_FAILED,
+    EVENT_RX_SUCCESS,
+    EVENT_RX_FAILED
 
 }rf_event;
 
@@ -235,8 +237,8 @@ packet_ins PATH_ARRAY[INS_PACKET_ARRAY_SIZE];
 uint8_t path_Index = 0;
 uint8_t loop_Index = 0;
 
-uint8_t packet_type = NOT_DEFINED;
-uint8_t RF_EVENT = NOT_DEFINED;
+uint8_t packet_type = PACKET_NOT_DEFINED;
+uint8_t RF_event    = EVENT_NOT_DEFINED;
 uint8_t TX_FAIL_FLAG = 0;
 uint8_t volatile Send_Data_To_Nxt_Slave = 0;
 
@@ -268,7 +270,7 @@ volatile uint8_t ping_ins_buf_count     =   0;
 
 uint8_t serverBuffer[SERVER_BUFFER_SIZE];
 uint8_t totalLength         =   0;
-uint8_t NEXT_BYTES          =   0; 
+uint8_t g_next_bytes        =   0;
 
 uint8_t Nxt_table_index;
 uint8_t neighbour_no;
@@ -348,6 +350,7 @@ uint32_t set_slave_adress(uint8_t slaveid,uint8_t *base_address)
 
 void construct_SERVER_packet( void )
 {
+
      if ( data_queue[data_queue_tail].data[POS_PACKET_NUMBER] == 1 )
      {
         totalLength = data_queue[data_queue_tail].data[POS_LENGTH];
@@ -356,21 +359,21 @@ void construct_SERVER_packet( void )
 
      if ( totalLength > MAX_LENGTH )
      {
-          memcpy( serverBuffer + NEXT_BYTES, (void *)&data_queue[data_queue_tail].data[POS_DATA], MAX_LENGTH );
+          memcpy( serverBuffer + g_next_bytes, (void *)&data_queue[data_queue_tail].data[POS_DATA], MAX_LENGTH );
           totalLength -= MAX_LENGTH;
-          NEXT_BYTES  += MAX_LENGTH;  
+          g_next_bytes  += MAX_LENGTH;  
      }
 
      else
      {
-           memcpy( serverBuffer + NEXT_BYTES, (void *)&data_queue[data_queue_tail].data[POS_DATA], totalLength );
+           memcpy( serverBuffer + g_next_bytes, (void *)&data_queue[data_queue_tail].data[POS_DATA], totalLength );
 
            if ( sending_to_server( totalLength ))
            {
               NRF_LOG_INFO("Response sent to server")
            }
            totalLength = 0;
-           NEXT_BYTES = 0;
+           g_next_bytes = 0;
            memset( serverBuffer, 0, sizeof(serverBuffer) );
      }
 
@@ -386,7 +389,7 @@ void sendDataBidirectional(uint8_t direction)
          * Send to NODES (using at other place)
          */
 
-        nrf_delay_us(50000); //to send the data 
+        nrf_delay_us(50000); 
         set_slave_adress(PATH_ARRAY[loop_Index].path[0], Nxt_Circle_Base_Addr);
         //set_slave_adress( headeer.circle_array[0], Nxt_Circle_Base_Addr );
         sendDataToNextSlave();
@@ -417,7 +420,7 @@ void sendDataToNextSlave(void)
             nrf_esb_start_rx();
       }
       #if 0
-      if ( RF_EVENT == TX_FAILED )
+      if ( RF_event == EVENT_TX_FAILED )
       {
              NRF_LOG_INFO("FAILED to send the data");
              /*
@@ -514,7 +517,7 @@ void pingNodes( void )
 
     for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
     {
-          if ( RF_EVENT == NOT_DEFINED || RF_EVENT == TX_FAILED )
+          if ( RF_event == EVENT_NOT_DEFINED || RF_event == EVENT_TX_FAILED )
           {
                 nrf_esb_stop_rx();
                 nrf_delay_us(50000); 
@@ -532,7 +535,7 @@ void pingNodes( void )
                       nrf_delay_us(5000); 
                 }
           }
-          if(done_rx_start == 1 && RF_EVENT == TX_SUCCESS)
+          if( done_rx_start == 1 && RF_event == EVENT_TX_SUCCESS )
           {
                 done_rx_start = 0;
                 nrf_esb_flush_tx();
@@ -540,12 +543,12 @@ void pingNodes( void )
                 set_slave_adress(DCU_PREFIX[0], DCU_BASE_ADDR_0); 
                 nrf_esb_start_rx();
           }
-          if ( RF_EVENT == RX_SUCCESS )
+          if ( RF_event == EVENT_RX_SUCCESS )
           {                          
               nrf_delay_ms(500);
               pingPacket();
               ping_ins_queue_pop();
-              RF_EVENT = NOT_DEFINED;
+              RF_event = EVENT_NOT_DEFINED;
           }
     }
 
@@ -799,14 +802,14 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
               case    NRF_ESB_EVENT_TX_SUCCESS:
 
                                                 NRF_LOG_DEBUG("TX SUCCESS EVENT");
-                                                RF_EVENT = TX_SUCCESS;
+                                                RF_event = EVENT_TX_SUCCESS;
                                                 Blink_LEDs();                      
 
-              break;
+                                                break;
 
               case    NRF_ESB_EVENT_TX_FAILED:
 
-                                                RF_EVENT = TX_FAILED;
+                                                RF_event = EVENT_TX_FAILED;
                                                 NRF_LOG_DEBUG("TX FAILED EVENT");
                                                 NRF_LOG_FLUSH();                
                       
@@ -819,45 +822,49 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                                       reRouting(); 
                                                 }
 
-              break;
+                                                break;
 
 
-              case    NRF_ESB_EVENT_RX_RECEIVED:
+              case  NRF_ESB_EVENT_RX_RECEIVED:
                       
-                              
-                                              if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
-                                              {
+                                                if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
+                                                {
+                                                    RF_event = EVENT_RX_SUCCESS;  
+                                                    Blink_LEDs();                    
 
-                                                   RF_EVENT = RX_SUCCESS;
-                                                   Blink_LEDs(); 
-                                       
-                                                   switch ( rx_payload.data[POS_PACKET_TYPE] )
-                                                   {
-                                                        case    PACKET_PING :
-                                                                              ping_ins_queue_push(rx_payload.data, rx_payload.length, rx_payload.rssi);
-                                                        break;
+                                                    switch ( rx_payload.data[POS_PACKET_TYPE] )
+                                                    {
 
-                                                        case    PACKET_INS  :
-                                                                              ping_ins_queue_push(rx_payload.data, rx_payload.length, rx_payload.rssi);
-                                                        break;
+                                                          case    PACKET_PING :
+                                                          case    PACKET_INS  :
+                                                                                ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
 
-                                                        case    PACKET_DATA :                                                                             
-                                                                              data_queue_push(rx_payload.data, rx_payload.length );
-                                                        break;
+                                                                                break;
 
-                                                        case    PACKET_PUSH :
-                                                                              data_queue_push(rx_payload.data, rx_payload.length);
-                                                        break;
+                                                          case    PACKET_DATA : 
+                                                          case    PACKET_PUSH :
+                                                                                data_queue_push( rx_payload.data, rx_payload.length );
+                                                                                break;
+                                                    }
+                                                    NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
+                                                } 
+                                                
+                                                else 
+                                                {
 
-                                                   } 
+                                                    RF_event = EVENT_RX_FAILED;
+                                                    NRF_LOG_ERROR("Ooops EVENT_RX_FAILED ... ");
+                                                    /* OOOPs we should not get this code execute */
+                                                } 
 
-                                                   #ifdef DAMU
-                                                   NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
-                                                   NRF_LOG_INFO("rx_queue[data_queue_tail].length : %d",rx_queue[data_queue_tail].length);    
-                                                   #endif                 
-                                              }  
+                                               #ifdef DAMU
+                                               NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
+                                               NRF_LOG_INFO("rx_queue[data_queue_tail].length : %d",rx_queue[data_queue_tail].length);    
+                                               #endif                 
+                                             
 
-                break;
+                                               break;
+                
 	}
 }
 
@@ -938,7 +945,7 @@ uint8_t sending_to_server(uint32_t size)
     }
     
     NRF_LOG_FLUSH();
-    return err_code;
+    return 1;
 }
 
 
@@ -1066,21 +1073,18 @@ int main(void) {
         while( true ) {
            NRF_LOG_FLUSH();
 
-           if ( ping_ins_buf_count > 0 )
-           {
+          /* Find out the Next Packet type from Queues */
+          packet_type = PACKET_NOT_DEFINED;
+
+          /* Ping and INstalation packetes are given High priority */
+          if ( ping_ins_buf_count > 0 )
+          {
               packet_type = ping_ins_queue[ping_ins_queue_tail].data[POS_PACKET_TYPE];
-           }
-           else
-           {
-              if ( data_buf_count > 0 )
-              {
-                  packet_type = data_queue[data_queue_tail].data[POS_PACKET_TYPE];
-              }
-              else
-              {
-                  packet_type = NOT_DEFINED;
-              }
-           }
+          }
+          else if ( data_buf_count > 0 )
+          {
+              packet_type = data_queue[data_queue_tail].data[POS_PACKET_TYPE];
+          }
 
 
            switch ( packet_type )

@@ -48,15 +48,12 @@
 #include "nrf_gpio.h"
 #include "nrf_error.h"
 #include "boards.h"
-
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
 #include "app_uart.h"
 #include "nrfx_uarte.h"
-#include "app_timer.h"
 
 
 void pingPacket(void);
@@ -126,7 +123,7 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 
 typedef enum 
 {
-    NOT_DEFINED,
+    PACKET_NOT_DEFINED,
     PACKET_DATA,
     PACKET_PING,
     PACKET_INS,
@@ -143,11 +140,11 @@ typedef enum
 
 typedef enum
 {
-    EVENT_NOT_DEFINED=0,
-    TX_SUCCESS = 1,
-    TX_FAILED,
-    RX_SUCCESS,
-    RX_FAILED
+    EVENT_NOT_DEFINED,
+    EVENT_TX_SUCCESS,
+    EVENT_TX_FAILED,
+    EVENT_RX_SUCCESS,
+    EVENT_RX_FAILED
 
 }rf_event;
 
@@ -275,7 +272,7 @@ uint8_t Nxt_table_index;
 uint8_t Prev_table_index = 0;
 uint8_t neighbour_no;
 uint8_t sendINS = 0; 
-uint8_t RF_EVENT = NOT_DEFINED;
+uint8_t RF_event = EVENT_NOT_DEFINED;
 uint8_t data_array1[UART_RX_BUF_SIZE];
 uint16_t uart_rx_index = 0;
 uint8_t Uart_rx_flag = 0;
@@ -616,7 +613,7 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                         NRF_LOG_FLUSH();
                                         Blink_LEDs(); 
                 
-                                        RF_EVENT = TX_SUCCESS;
+                                        RF_event = EVENT_TX_SUCCESS;
 
         break;
 
@@ -632,7 +629,7 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                         {   
                                             reRouting(); 
                                         }
-                                        RF_EVENT = TX_FAILED;
+                                        RF_event = EVENT_TX_FAILED;
                                         
 
         break;
@@ -640,7 +637,7 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
         case NRF_ESB_EVENT_RX_RECEIVED:
                                         if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                                         {
-                                             RF_EVENT = RX_SUCCESS;  
+                                             RF_event = EVENT_RX_SUCCESS;  
                                              Blink_LEDs();                    
 
                                              switch ( rx_payload.data[POS_PACKET_TYPE] )
@@ -660,8 +657,8 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                      
                                         } else {
                                         
-                                              RF_EVENT = RX_FAILED;
-                                              NRF_LOG_ERROR("Ooops rx_Failed ... ");
+                                              RF_event = EVENT_RX_FAILED;
+                                              NRF_LOG_ERROR("Ooops EVENT_RX_FAILED ... ");
                                               /* OOOPs we should not get this code execute */
                                         } 
 
@@ -923,7 +920,7 @@ static void pingNodes( uint8_t circle )
 
     for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
     {
-          if ( RF_EVENT == EVENT_NOT_DEFINED || RF_EVENT == TX_FAILED )
+          if ( RF_event == EVENT_NOT_DEFINED || RF_event == EVENT_TX_FAILED )
           {
                 nrf_esb_stop_rx();
                 //nrf_delay_ms(500);
@@ -941,7 +938,7 @@ static void pingNodes( uint8_t circle )
                       nrf_delay_us(50000); 
                 }
           }
-          if(done_rx_start == 1 && RF_EVENT == TX_SUCCESS)
+          if(done_rx_start == 1 && RF_event == EVENT_TX_SUCCESS)
           {
                 done_rx_start = 0;
                 nrf_esb_flush_tx();
@@ -949,12 +946,12 @@ static void pingNodes( uint8_t circle )
                 set_slave_adress(addr_prefix[0], arrays[Current_Circle]); 
                 nrf_esb_start_rx();
           }
-          if ( RF_EVENT == RX_SUCCESS )
+          if ( RF_event == EVENT_RX_SUCCESS )
           {                                
               nrf_delay_ms(500);
               pingPacket();
               ping_ins_queue_pop();
-              RF_EVENT = EVENT_NOT_DEFINED;
+              RF_event = EVENT_NOT_DEFINED;
           }
     }
 } 
@@ -1277,22 +1274,10 @@ void send_INS_packet( void )
     sendDataToNextSlave();
 }
 
-
-static void timers_init(void)
-{
-    ret_code_t err_code = app_timer_init();
-    APP_ERROR_CHECK(err_code);
-}
-
-
 uint8_t pushTimeOut = 1;
 uint8_t  open_request1[20] = {0x7E, 0xA0, 0x07, 0x03,0x21, 0x93, 0x0F, 0x01, 0x7E};
 
-
-
-
-
-void main(void)
+int main(void)
 {
     uint32_t err_code; 
     uint8_t check_nerby[PACKET_HEADER_SIZE];
@@ -1307,8 +1292,7 @@ void main(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     clocks_start();
-    timers_init();
-
+    
      
     err_code = esb_init();
     APP_ERROR_CHECK(err_code);
@@ -1332,7 +1316,7 @@ void main(void)
 
 
         /* Find out the Next Packet type from Queues */
-        packet_type = NOT_DEFINED;
+        packet_type = PACKET_NOT_DEFINED;
 
         /* Ping and INstalation packetes are given High priority */
         if ( ping_ins_buf_count > 0 )
