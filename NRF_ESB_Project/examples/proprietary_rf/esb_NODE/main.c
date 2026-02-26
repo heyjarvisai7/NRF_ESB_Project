@@ -54,6 +54,9 @@
 
 #include "app_uart.h"
 #include "nrfx_uarte.h"
+#include "nrf_drv_timer.h"
+#include "bsp.h"
+#include "app_error.h"
 
 
 void pingPacket(void);
@@ -1274,8 +1277,83 @@ void send_INS_packet( void )
     sendDataToNextSlave();
 }
 
+const nrf_drv_timer_t TIMER = NRF_DRV_TIMER_INSTANCE(1);
+
 uint8_t pushTimeOut = 1;
+uint8_t d_start = 1;
+
+void d_timmer_stop(void)
+{
+    nrf_drv_timer_disable(&TIMER);
+    nrf_drv_timer_clear(&TIMER);
+
+    nrf_timer_event_clear(TIMER.p_reg, NRF_TIMER_EVENT_COMPARE0);
+}
+
+void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
+{
+    switch (event_type)
+    {
+        case NRF_TIMER_EVENT_COMPARE0:
+                                         send_data_to_dcu(uart_rx_index);
+                                         uart_rx_index = 0;
+                                         Uart_rx_flag = 0;
+                                         d_start = 1;
+                                         d_timmer_stop();
+                                         break;
+
+        default:
+            
+            break;
+    }
+}
+
+void d_timmer_init()
+{
+    uint32_t err_code = NRF_SUCCESS;
+
+    nrf_drv_timer_config_t timer_cfg = NRF_DRV_TIMER_DEFAULT_CONFIG;
+
+    timer_cfg.frequency = NRF_TIMER_FREQ_1MHz;
+    timer_cfg.mode = NRF_TIMER_MODE_TIMER;
+    timer_cfg.bit_width = NRF_TIMER_BIT_WIDTH_32;
+
+    err_code = nrf_drv_timer_init(&TIMER, &timer_cfg, timer_event_handler);
+    APP_ERROR_CHECK(err_code);
+
+    nrf_drv_timer_disable(&TIMER);
+
+    nrf_timer_event_clear(TIMER.p_reg, NRF_TIMER_EVENT_COMPARE0);
+
+}
+
+void d_timmer_start(uint32_t time_ms)
+{
+     uint32_t time_ticks;
+     time_ticks = nrf_drv_timer_ms_to_ticks(&TIMER, time_ms);
+
+     nrf_drv_timer_extended_compare(
+                     &TIMER, 
+                     NRF_TIMER_CC_CHANNEL0, 
+                     time_ticks, 
+                     NRF_TIMER_SHORT_COMPARE0_CLEAR_MASK, 
+                     true);
+
+     nrf_drv_timer_clear(&TIMER);
+     nrf_drv_timer_enable(&TIMER);
+}
+
+
+
 uint8_t  open_request1[20] = {0x7E, 0xA0, 0x07, 0x03,0x21, 0x93, 0x0F, 0x01, 0x7E};
+
+uint8_t open_response[32] = {
+    0x7E, 0xA0, 0x1E, 0x21, 0x03, 0x73, 0xC3, 0x7A,
+    0x81, 0x80, 0x12, 0x05, 0x01, 0x80, 0x06, 0x01,
+    0x80, 0x07, 0x04, 0x00, 0x00, 0x00, 0x01,
+    0x08, 0x04, 0x00, 0x00, 0x00, 0x01,
+    0x53, 0x3B, 0x7E
+};
 
 int main(void)
 {
@@ -1292,7 +1370,6 @@ int main(void)
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     clocks_start();
-    
      
     err_code = esb_init();
     APP_ERROR_CHECK(err_code);
@@ -1301,12 +1378,14 @@ int main(void)
 
     //err_code = esb_uart_init();
     uart_init();
-    
-
+   
     err_code = nrf_esb_start_rx();
     APP_ERROR_CHECK(err_code);
     NRF_LOG_FLUSH();
 
+    d_timmer_init();
+
+    
     
   
     while(true)
@@ -1391,10 +1470,10 @@ int main(void)
 
            default:
                     /* Do nothing */
+                    break;
 
         }
 
-       
         if( Diagnostic_Test == 1 )
         {
             doDiagnosticTest();
@@ -1405,22 +1484,22 @@ int main(void)
             send_INS_packet();
         }
 
-        if( Uart_rx_flag == 1 )
+        if( Uart_rx_flag == 1 && d_start == 1 )
         {
-           nrf_delay_us(500000);
-          //memcpy(&data_queue[data_queue_tail].data[PACKET_HEADER_SIZE+1], data_array1, uart_rx_index);
-          
-          send_data_to_dcu(uart_rx_index);
-          uart_rx_index = 0;
-          Uart_rx_flag = 0;
+            d_timmer_start(500);
+            d_start = 0;
         }
+
+
+
+
 
 /* Testing code */
 #if 1
         if ( pushTimeOut == 0 )
         {
-
-            memcpy( data_array1, open_request1, 9 );
+            
+            memcpy( data_array1, open_response, 32 );
            
             nrf_delay_us(50000);
             memset( &header, 0, PACKET_HEADER_SIZE );
@@ -1430,7 +1509,7 @@ int main(void)
             header.length                         = uart_rx_index;
             header.circle_array[Current_Circle]   = addr_prefix[0];
 
-            send_data_to_dcu(9);
+            send_data_to_dcu(32);
             uart_rx_index = 0;
             Uart_rx_flag = 0;
             pushTimeOut = 1;

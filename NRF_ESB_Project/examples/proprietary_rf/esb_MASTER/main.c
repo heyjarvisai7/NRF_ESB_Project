@@ -1114,7 +1114,8 @@ int main(void) {
                 case      PACKET_INS  : 
                                         storePath();
                                         ping_ins_queue_pop(); 
-                                        insDone = 1;                                    
+                                        insDone = 1;
+                                                                           
                 break;
 
                 case      PACKET_PUSH :
@@ -1150,17 +1151,22 @@ int main(void) {
                        * Actually this header filling data need to take from UART(GSM)
                        */
                       nrf_esb_stop_rx();
-                      fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
+                      
+#if 1
 
-                      //fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
+                      fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
+                      memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
+                      memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
+                      tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);    
+#else
+                                
+                      fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
                       memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
 
                       memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
                       tx_payload.length = ( PACKET_HEADER_SIZE + (open_request1[2] + 2));
-
-                      //memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
-                      //tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);    
-                                
+#endif
+                      
                       uart_rx_index = 0;
                       sendDataBidirectional( headeer.Direction );
 

@@ -131,7 +131,6 @@ extern "C" {
 
 /**@brief Application time-out handler type. */
 typedef void (*app_timer_timeout_handler_t)(void * p_context);
-
 #ifdef APP_TIMER_V2
 /**
  * @brief app_timer control block

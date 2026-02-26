@@ -66,6 +66,7 @@
 
 #ifndef APP_TIMER_H__
 #define APP_TIMER_H__
+#define APP_TIMER_V2 1
 #include "sdk_config.h"
 #include "app_error.h"
 #include "app_util.h"
