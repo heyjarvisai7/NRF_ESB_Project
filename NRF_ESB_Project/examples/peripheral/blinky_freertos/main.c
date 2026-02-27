@@ -65,10 +65,11 @@
 #endif
 
 #define TASK_DELAY        200           /**< Task delay. Delays a LED0 task for 200 ms */
-#define TIMER_PERIOD      1000          /**< Timer period. LED1 timer will expire after 1000 ms */
+#define TIMER_PERIOD      100          /**< Timer period. LED1 timer will expire after 1000 ms */
 
 TaskHandle_t  led_toggle_task_handle;   /**< Reference to LED0 toggling FreeRTOS task. */
 TimerHandle_t led_toggle_timer_handle;  /**< Reference to LED1 toggling FreeRTOS timer. */
+TaskHandle_t led3_toggle_task_handle;
 
 /**@brief LED0 task entry function.
  *
@@ -86,6 +87,15 @@ static void led_toggle_task_function (void * pvParameter)
 
         /* Tasks must be implemented to never return... */
     }
+}
+
+void led2_toggle_task( void *argc )
+{
+      while( true )
+      {
+          bsp_board_led_invert(BSP_BOARD_BUTTON_2);
+          vTaskDelay(TASK_DELAY);
+      }
 }
 
 /**@brief The function to call when the LED1 FreeRTOS timer expires.
@@ -111,6 +121,8 @@ int main(void)
 
     /* Create task for LED0 blinking with priority set to 2 */
     UNUSED_VARIABLE(xTaskCreate(led_toggle_task_function, "LED0", configMINIMAL_STACK_SIZE + 200, NULL, 2, &led_toggle_task_handle));
+
+    UNUSED_VARIABLE(xTaskCreate(led2_toggle_task, "LED2", configMINIMAL_STACK_SIZE + 200, NULL, 2, &led3_toggle_task_handle));
 
     /* Start timer for LED1 blinking */
     led_toggle_timer_handle = xTimerCreate( "LED1", TIMER_PERIOD, pdTRUE, NULL, led_toggle_timer_callback);

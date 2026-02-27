@@ -243,10 +243,9 @@ uint8_t arrays[MAX_CIRCLE][ARRRAY_SIZE] =
 };
 
 
-
 uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
 uint8_t base_addr_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
-uint8_t addr_prefix[8] = {0x20};
+uint8_t addr_prefix[8] = {0xE7};
 
 uint8_t DCU_BASE[4] = { 0xDC, 0xDC, 0xDC, 0xDC };
 uint8_t DCU_PREFIX[1] = { 0x01 };
@@ -876,8 +875,8 @@ uint32_t esb_init( void )
     nrf_esb_config.event_handler            = nrf_esb_event_handler;
     nrf_esb_config.mode                     = NRF_ESB_MODE_PTX;
     nrf_esb_config.selective_auto_ack       = false;
-    //nrf_esb_config.retransmit_count     
 
+    nrf_esb_enable_pipes(0x01);
 
     err_code = nrf_esb_init(&nrf_esb_config);
     VERIFY_SUCCESS(err_code);
@@ -1386,14 +1385,12 @@ int main(void)
     d_timmer_init();
 
     
-    
-  
     while(true)
     {
   
         NRF_LOG_FLUSH();
 
-
+#if 0
         /* Find out the Next Packet type from Queues */
         packet_type = PACKET_NOT_DEFINED;
 
@@ -1515,6 +1512,8 @@ int main(void)
             pushTimeOut = 1;
         }
 #endif // Testing 
+
+#endif
 
     }
   

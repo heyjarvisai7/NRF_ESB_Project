@@ -253,9 +253,21 @@ uint8_t  addr[4] = {0xE7,0xE6, 0x00,0x00};
 uint8_t server_SerialNo[8] = { 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 };
 
 uint8_t DCU_BASE_ADDR_0[4] = {0xDC, 0xDC, 0xDC, 0xDC};
-uint8_t DCU_BASE_ADDR_1[4] = {0xC2, 0xC2, 0xC2, 0xC2};
-uint8_t DCU_PREFIX[1] = {0x01};
+uint8_t DCU_BASE_ADDR_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
+//uint8_t DCU_PREFIX[1] = {0x01};
 
+
+// Prefix bytes (unique for each pipe)
+uint8_t DCU_PREFIX[8] = {
+    0xE7,  // Pipe 0 → Full addr: E7E7E7E7E7
+    0xC2,  // Pipe 1 → Full addr: C2C2C2C2C2
+    0xC3,  // Pipe 2 → Full addr: C2C2C2C2C3
+    0xC4,  // Pipe 3 → Full addr: C2C2C2C2C4
+    0xC5,  // Pipe 4 → Full addr: C2C2C2C2C5
+    0xC6,  // Pipe 5 → Full addr: C2C2C2C2C6
+    0xC7,  // Pipe 6 → Full addr: C2C2C2C2C7
+    0xC8   // Pipe 7 → Full addr: C2C2C2C2C8
+};
 
 volatile rx_packet_t data_queue[QUEUE_SIZE];
 volatile uint8_t data_queue_head    =   0;
@@ -826,11 +838,13 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 
 
               case  NRF_ESB_EVENT_RX_RECEIVED:
-                      
                                                 if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                                                 {
+                                                      
                                                     RF_event = EVENT_RX_SUCCESS;  
-                                                    Blink_LEDs();                    
+                                                    Blink_LEDs(); 
+                                                    
+                                                    NRF_LOG_INFO("rx_payload.pipe : %x", rx_payload.pipe );                   
 
                                                     switch ( rx_payload.data[POS_PACKET_TYPE] )
                                                     {
@@ -847,7 +861,10 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                                                                 break;
                                                     }
                                                     NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
-                                                } 
+                                                       
+                                                }
+                      
+                                               
                                                 
                                                 else 
                                                 {
@@ -861,7 +878,6 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                                NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
                                                NRF_LOG_INFO("rx_queue[data_queue_tail].length : %d",rx_queue[data_queue_tail].length);    
                                                #endif                 
-                                             
 
                                                break;
                 
@@ -909,7 +925,7 @@ uint32_t esb_init( void )
 	err_code = nrf_esb_set_base_address_1(DCU_BASE_ADDR_1);
 	VERIFY_SUCCESS(err_code);
 
-	err_code = nrf_esb_set_prefixes(DCU_PREFIX, 1);
+	err_code = nrf_esb_set_prefixes(DCU_PREFIX, 8);
 	VERIFY_SUCCESS(err_code);
 
 	return err_code;
