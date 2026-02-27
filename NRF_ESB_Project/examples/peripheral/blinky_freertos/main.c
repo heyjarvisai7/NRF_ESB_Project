@@ -122,7 +122,7 @@ int main(void)
     /* Create task for LED0 blinking with priority set to 2 */
     UNUSED_VARIABLE(xTaskCreate(led_toggle_task_function, "LED0", configMINIMAL_STACK_SIZE + 200, NULL, 2, &led_toggle_task_handle));
 
-    UNUSED_VARIABLE(xTaskCreate(led2_toggle_task, "LED2", configMINIMAL_STACK_SIZE + 200, NULL, 2, &led3_toggle_task_handle));
+    xTaskCreate(led2_toggle_task, "LED2", configMINIMAL_STACK_SIZE + 200, NULL, 2, &led3_toggle_task_handle);
 
     /* Start timer for LED1 blinking */
     led_toggle_timer_handle = xTimerCreate( "LED1", TIMER_PERIOD, pdTRUE, NULL, led_toggle_timer_callback);
