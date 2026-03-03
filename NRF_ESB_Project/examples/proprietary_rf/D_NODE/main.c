@@ -119,12 +119,12 @@ static nrf_esb_payload_t        tx_payload = NRF_ESB_CREATE_PAYLOAD(0, 0x01, 0x0
 #define     UART_RX_BUF_SIZE                  2048                                         /**< UART RX buffer size. */
 #define     MAX_TRANFERSIZE                   252 
 #define     DATA_SIZE                         ( MAX_TRANFERSIZE- PACKET_HEADER_SIZE )
-#define     FAIL_COUNT                        3
+
 
 
 typedef enum 
 {
-    PACKET_NOT_DEFINED,
+    PACKET_UNKNOWN,
     PACKET_DATA,
     PACKET_PING,
     PACKET_INS,
@@ -141,22 +141,14 @@ typedef enum
 
 typedef enum
 {
-    EVENT_NOT_DEFINED,
+    EVENT_IDLE,
     EVENT_TX_SUCCESS,
     EVENT_TX_FAILED,
     EVENT_RX_SUCCESS,
     EVENT_RX_FAILED
 
-}rf_eventt;
-
-
-typedef enum
-{
-    TX_SUCCESS = 1,
-    TX_FAILED,
-    RX_SUCCESS
-
 }rf_event;
+
 
 typedef enum
 {
@@ -278,11 +270,11 @@ uint8_t Nxt_table_index;
 uint8_t Prev_table_index;
 uint8_t neighbour_no;
 uint8_t sendINS = 0; 
-uint8_t RF_EVENT = EVENT_NOT_DEFINED;
+uint8_t g_rf_event = EVENT_IDLE;
 uint8_t data_array1[UART_RX_BUF_SIZE];
 uint16_t uart_rx_index = 0;
 uint8_t Uart_rx_flag = 0;
-uint8_t tx_fail_count = FAIL_COUNT;
+
 
 struct Packet_Header header;
 neighbor_t *Nxt_neighbor = &Nxt_neighbor_table[0];
@@ -599,7 +591,7 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                         NRF_LOG_DEBUG("TX SUCCESS EVENT");
                                         NRF_LOG_FLUSH();
                 
-                                        RF_EVENT = TX_SUCCESS;
+                                        g_rf_event = EVENT_TX_SUCCESS;
                                         Blink_LEDs(); 
 
         break;
@@ -607,20 +599,15 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
         case NRF_ESB_EVENT_TX_FAILED:
                                         NRF_LOG_DEBUG("TX FAILED EVENT");
                                         NRF_LOG_FLUSH();
-                                        RF_EVENT = TX_FAILED;
+                                        g_rf_event = EVENT_TX_FAILED;
 
                                         if(tx_payload.data[POS_PACKET_TYPE] == PACKET_PING)
                                         {
                                            neighbour_no++;
                                         }
                                         else
-                                        {   
-                                            tx_fail_count--;
-                                            if ( tx_fail_count == 0 )
-                                            {
-                                                 reRouting(); 
-                                                 tx_fail_count = FAIL_COUNT;
-                                            } 
+                                        {                                             
+                                            reRouting();                      
                                         }
                                         
 
@@ -629,38 +616,33 @@ void  nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
         case NRF_ESB_EVENT_RX_RECEIVED:
                                         if (nrf_esb_read_rx_payload(&rx_payload) == NRF_SUCCESS)
                                         {
-
-                                             /*Need to store in comming packets*/
-                        
-                                             RF_EVENT = RX_SUCCESS;  
+                                             NRF_LOG_DEBUG("TX SUCCESS EVENT");
+                                             NRF_LOG_FLUSH();                       
+                                             g_rf_event = EVENT_RX_SUCCESS;  
                                              Blink_LEDs();                    
 
                                              switch ( rx_payload.data[POS_PACKET_TYPE] )
                                              {
                                                   case    PACKET_PING :
-                                                                        //packet_type   =   PACKET_PING;
-                                                                        ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
-
-                                                  break;
-
                                                   case    PACKET_INS  :
-                                                                        //packet_type   =   PACKET_INS;
+                                                                        
                                                                         ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
-                                                  break;
+                                                                        break;
 
                                                   case    PACKET_DATA :
-                                                                        //packet_type   =    PACKET_DATA;   
-                                                                        data_queue_push( rx_payload.data, rx_payload.length );
-                                                  break;
-
                                                   case    PACKET_PUSH :
-                                                                        //packet_type   =    PACKET_PUSH;
+                                                                        
                                                                         data_queue_push( rx_payload.data, rx_payload.length );
-                                                  break;
+                                                                        break;
+              
                                              }
-                                             NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);
-                     
-                                        }  
+                                             NRF_LOG_INFO("rx_payload.length : %d",rx_payload.length);                     
+                                        } 
+                                        else
+                                        {
+                                              g_rf_event = EVENT_RX_FAILED;
+                                              NRF_LOG_INFO("EVENT : EVENT_RX_FAILED - Not properly recived");
+                                        } 
 
           break;
     }
@@ -687,8 +669,7 @@ void reRouting(void)
           tx_payload.data[POS_CIRCLE_ARRAY+ Current_Circle + 1] = Nxt_neighbor->node_id;
  
           set_slave_adress(Nxt_neighbor->node_id, arrays[Current_Circle + 1]);
-          sendDataToNextSlave();         
-    
+          sendDataToNextSlave();             
        }
  
        else
@@ -782,7 +763,7 @@ void pingPacket(void)
           if ( ping_ins_queue[ping_ins_queue_tail].data[POS_PACKET_TYPE] == PACKET_PING && ping_ins_queue[ping_ins_queue_tail].data[POS_LENGTH] == STORE_NODE_INFO )
           {
                 memcpy(&advertisment_pcket, (void *)ping_ins_queue[ping_ins_queue_tail].data + sizeof(header), sizeof(advertisment_pcket));
-                if(ping_ins_queue[ping_ins_queue_tail].rssi > 0 && Nxt_table_index < MAX_NEIGHBORS && advertisment_pcket.circle_no == Current_Circle +1)
+                if(ping_ins_queue[ping_ins_queue_tail].rssi > 0 && Nxt_table_index < MAX_NEIGHBORS && advertisment_pcket.circle_no == Current_Circle + 1)
                 {
                       Nxt_neighbor_table[Nxt_table_index].node_id = advertisment_pcket.node_id;
                       Nxt_neighbor_table[Nxt_table_index].rssi = ping_ins_queue[ping_ins_queue_tail].rssi;
@@ -867,7 +848,7 @@ uint32_t esb_init( void )
 
     nrf_esb_config_t nrf_esb_config         = NRF_ESB_DEFAULT_CONFIG;
     nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
-    nrf_esb_config.retransmit_count         = 1;
+    nrf_esb_config.retransmit_count         = 2;
     nrf_esb_config.retransmit_delay         = 600;
     nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_2MBPS;
     nrf_esb_config.event_handler            = nrf_esb_event_handler;
@@ -919,7 +900,7 @@ static void pingNodes( uint8_t circle )
 
     for(neighbour_no = MIN_NODES; neighbour_no < MAX_NODES ;)
     {
-          if ( RF_EVENT == EVENT_NOT_DEFINED || RF_EVENT == TX_FAILED )
+          if ( g_rf_event == EVENT_IDLE || g_rf_event == EVENT_TX_FAILED )
           {
                 nrf_esb_stop_rx();
                 //nrf_delay_ms(500);
@@ -937,7 +918,7 @@ static void pingNodes( uint8_t circle )
                       nrf_delay_us(50000); 
                 }
           }
-          if(done_rx_start == 1 && RF_EVENT == TX_SUCCESS)
+          if(done_rx_start == 1 && g_rf_event == EVENT_TX_SUCCESS)
           {
                 done_rx_start = 0;
                 nrf_esb_flush_tx();
@@ -945,12 +926,12 @@ static void pingNodes( uint8_t circle )
                 set_slave_adress(addr_prefix[0], arrays[Current_Circle]); 
                 nrf_esb_start_rx();
           }
-          if ( RF_EVENT == RX_SUCCESS )
+          if ( g_rf_event == EVENT_RX_SUCCESS )
           {                                
               nrf_delay_ms(500);
               pingPacket();
               ping_ins_queue_pop();
-              RF_EVENT = EVENT_NOT_DEFINED;
+              g_rf_event = EVENT_IDLE;
           }
     }
 } 
@@ -1112,10 +1093,16 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
           }
           else
           {
+              /*
+               *  That PUSH packet also goes like INS packet only 
+               */
               if ( tx_payload.data[POS_PACKET_TYPE] == PACKET_PUSH || tx_payload.data[POS_PACKET_TYPE] == PACKET_INS )
               {
                   set_slave_adress( Prev_neighbor->node_id, arrays[Current_Circle - 1] );
               }
+              /*
+               * DATA packet & requested DATA
+               */
               else
               {
                   set_slave_adress(tx_payload.data[POS_CIRCLE_ARRAY + Current_Circle - 1], arrays[Current_Circle - 1]);
@@ -1127,7 +1114,6 @@ void fillPacket(uint8_t direction, uint8_t *data, uint16_t length)
 
 void sendDataToNextSlave(void)
 {      
-        //nrf_esb_stop_rx();
         
         if (nrf_esb_write_payload(&tx_payload) == NRF_SUCCESS)
         {
@@ -1213,7 +1199,7 @@ void send_data_to_dcu(uint16_t length)
       uint16_t sent_bytes_count = 0;
       uint16_t length1 = length;
 
-       NRF_LOG_INFO("first %d",length);
+       NRF_LOG_INFO("Length : %d",length);
 
        header.packet_Number = 0;
 
@@ -1299,17 +1285,34 @@ void d_timmer_stop(void)
     nrf_timer_event_clear(TIMER.p_reg, NRF_TIMER_EVENT_COMPARE0);
 }
 
+volatile uint8_t seconds_cout = 0;
+
 void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
 {
     switch (event_type)
     {
         case NRF_TIMER_EVENT_COMPARE0:
-                                         //send_data_to_dcu(uart_rx_index);
-                                         //uart_rx_index = 0;
-                                         //Uart_rx_flag = 0;
-                                         //d_start = 1;
-                                         sendINS = 1;
-                                         //d_timmer_stop();
+                                         seconds_cout++;
+                                         NRF_LOG_INFO("seconds_cout : %d", seconds_cout);
+
+
+                                         //if ( ( seconds_cout % 30 ) == 0 ) 
+                                         //{
+                                         //     pushTimeOut = 0;
+                                         //}
+
+                                         //if ( seconds_cout == 5 )
+                                         {
+                                             send_data_to_dcu(uart_rx_index);
+                                             uart_rx_index = 0;
+                                             Uart_rx_flag = 0;
+                                             d_start = 1;
+                                         }
+                                         //if ( seconds_cout == 1 )
+                                         //{
+                                         //   sendINS = 1;
+                                         //}
+                                         d_timmer_stop();
                                          break;
 
         default:
@@ -1318,7 +1321,7 @@ void timer_event_handler(nrf_timer_event_t event_type, void* p_context)
     }
 }
 
-void d_timmer_init()
+void d_timmer_init( void )
 {
     uint32_t err_code = NRF_SUCCESS;
 
@@ -1386,9 +1389,11 @@ void main(void)
 
     NRF_LOG_DEBUG("NODE");
 
-    //err_code = esb_uart_init();
-    uart_init();
     
+    uart_init();
+    d_timmer_init();
+
+    //d_timmer_start(500);   // for INS to send
 
     err_code = nrf_esb_start_rx();
     APP_ERROR_CHECK(err_code);
@@ -1400,7 +1405,7 @@ void main(void)
         NRF_LOG_FLUSH();
 
        /* Find out the Next Packet type from Queues */
-        packet_type = PACKET_NOT_DEFINED;
+        packet_type = PACKET_UNKNOWN;
 
         /* Ping and INstalation packetes are given High priority */
         if ( ping_ins_buf_count > 0 )
@@ -1434,7 +1439,7 @@ void main(void)
                                             /* Request from DCU
 
                                              * if -> not mine data
-                                             * else -> y data only
+                                             * else -> mine data only
                                              */
 
                                             if(data_queue[data_queue_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle ) + 1] != 0)
@@ -1471,9 +1476,6 @@ void main(void)
                                   ping_ins_queue_pop();
                                   
                                   break; 
-
-
-            
 
         }
 

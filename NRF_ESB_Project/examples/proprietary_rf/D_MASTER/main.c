@@ -676,7 +676,6 @@ bool ping_ins_queue_push(uint8_t *in_data, uint16_t in_len, uint8_t rssi)
     if ( ping_ins_buf_count >= QUEUE_SIZE)
     {
         NRF_LOG_INFO("PING PUSHED FAIL");
-        NRF_LOG_FLUSH();
         return false;
     }
     memcpy((void *)ping_ins_queue[ping_ins_queue_head].data, in_data, in_len);
@@ -691,7 +690,6 @@ bool ping_ins_queue_push(uint8_t *in_data, uint16_t in_len, uint8_t rssi)
     nrf_esb_flush_tx();
 
     NRF_LOG_INFO("PING PUSHED");
-    //NRF_LOG_FLUSH();
 
     return true;
 }
@@ -702,7 +700,6 @@ bool ping_ins_queue_pop(void)
     if ( ping_ins_buf_count <= 0 )
     {
         NRF_LOG_INFO("PING_INS POPED FAIL");
-        //NRF_LOG_FLUSH();
         return false;   
     }
 
@@ -714,7 +711,6 @@ bool ping_ins_queue_pop(void)
 
     NRF_LOG_INFO("PING_INS POPED");
     NRF_LOG_INFO("(After POP)ping_ins_buf_count %d", ping_ins_buf_count );
-    //NRF_LOG_FLUSH();
 
     return true;
 }
@@ -725,7 +721,6 @@ bool data_queue_push(uint8_t *in_data, uint16_t in_len)
     if ( data_buf_count >= QUEUE_SIZE)
     {
         NRF_LOG_INFO("DATA PUSHED FAIL");
-        //NRF_LOG_FLUSH();
         return false;
     }
     memcpy((void *)data_queue[data_queue_head].data, in_data, in_len);
@@ -739,8 +734,6 @@ bool data_queue_push(uint8_t *in_data, uint16_t in_len)
     nrf_esb_flush_tx();
 
     NRF_LOG_INFO("DATA PUSHED");
-    
-    //NRF_LOG_FLUSH();
 
     return true;
 }
@@ -791,10 +784,6 @@ void Blink_LEDs(void)
 }
 
 
-
-
-
-
 void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
 {
 	switch (p_event->evt_id)
@@ -838,7 +827,6 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
                                                           case    PACKET_PING :
                                                           case    PACKET_INS  :
                                                                                 ping_ins_queue_push( rx_payload.data, rx_payload.length, rx_payload.rssi );
-
                                                                                 break;
 
                                                           case    PACKET_DATA : 
@@ -893,6 +881,7 @@ uint32_t esb_init( void )
 	
 	nrf_esb_config_t nrf_esb_config         = NRF_ESB_DEFAULT_CONFIG;
 	nrf_esb_config.protocol                 = NRF_ESB_PROTOCOL_ESB_DPL;
+        nrf_esb_config.retransmit_count         = 2;
 	nrf_esb_config.retransmit_delay         = 600;
 	nrf_esb_config.bitrate                  = NRF_ESB_BITRATE_2MBPS;
 	nrf_esb_config.event_handler            = nrf_esb_event_handler;
@@ -944,6 +933,7 @@ uint8_t sending_to_server(uint32_t size)
         }
     }
     
+    
     NRF_LOG_FLUSH();
     return 1;
 }
@@ -985,17 +975,17 @@ static void uart_init(void)
 
     app_uart_comm_params_t const comm_params =
     {
-                                                .rx_pin_no    = RX_PIN_NUMBER,
-                                                .tx_pin_no    = TX_PIN_NUMBER,
-                                                .rts_pin_no   = RTS_PIN_NUMBER,
-                                                .cts_pin_no   = CTS_PIN_NUMBER,
-                                                .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
-                                                .use_parity   = false,
-                                        #if defined (UART_PRESENT)
-                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
-                                        #else
-                                                .baud_rate    = NRF_UARTE_BAUDRATE_9600
-                                        #endif
+                              .rx_pin_no    = RX_PIN_NUMBER,
+                              .tx_pin_no    = TX_PIN_NUMBER,
+                              .rts_pin_no   = RTS_PIN_NUMBER,
+                              .cts_pin_no   = CTS_PIN_NUMBER,
+                              .flow_control = APP_UART_FLOW_CONTROL_DISABLED,
+                              .use_parity   = false,
+                      #if defined (UART_PRESENT)
+                              .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                      #else
+                              .baud_rate    = NRF_UARTE_BAUDRATE_9600
+                      #endif
     };
 
 
@@ -1009,7 +999,8 @@ static void uart_init(void)
     APP_ERROR_CHECK(err_code);
 }
 
-void updatepath(void) {
+void updatepath(void) 
+{
     uint8_t circle_no = 0;
     uint8_t node_id   = 0;
 
@@ -1064,111 +1055,118 @@ int main(void) {
 	APP_ERROR_CHECK(err_code);
 
 	NRF_LOG_DEBUG("DCU code started");
-        NRF_LOG_FLUSH();
+        
         
 
         err_code = nrf_esb_start_rx();
         APP_ERROR_CHECK(err_code);
 
-        while( true ) {
-           NRF_LOG_FLUSH();
+        while( true ) 
+        {
+               NRF_LOG_FLUSH();
 
-          /* Find out the Next Packet type from Queues */
-          packet_type = NOT_DEFINED;
+              /* Find out the Next Packet type from Queues */
+              packet_type = NOT_DEFINED;
 
-          /* Ping and INstalation packetes are given High priority */
-          if ( ping_ins_buf_count > 0 )
-          {
-              packet_type = ping_ins_queue[ping_ins_queue_tail].data[POS_PACKET_TYPE];
-          }
-          else if ( data_buf_count > 0 )
-          {
-              packet_type = data_queue[data_queue_tail].data[POS_PACKET_TYPE];
-          }
+              /* Ping and INstalation packetes are given High priority */
+              if ( ping_ins_buf_count > 0 )
+              {
+                  packet_type = ping_ins_queue[ping_ins_queue_tail].data[POS_PACKET_TYPE];
+              }
+              else if ( data_buf_count > 0 )
+              {
+                  packet_type = data_queue[data_queue_tail].data[POS_PACKET_TYPE];
+              }
 
 
-           switch ( packet_type )
-           {
+               switch ( packet_type )
+               {
               
-                NRF_LOG_FLUSH();
+                    NRF_LOG_FLUSH();
 
-                case      PACKET_DATA : 
-                                        if ( data_buf_count != 0 )
-                                        {
-                                              if ( data_queue[data_queue_tail].data[POS_DIRTY_FLAG] == TRUE )
-                                              {
-                                                  updatepath();
-                                                  NRF_LOG_INFO("PATH UPDATED");
-                                              }
-                                              sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
-                                              data_queue_pop();
-                                        }
-                break;
+                    case      PACKET_DATA : 
+                                            if ( data_buf_count != 0 )
+                                            {
+                                                  if ( data_queue[data_queue_tail].data[POS_DIRTY_FLAG] == TRUE )
+                                                  {
+                                                      updatepath();
+                                                      NRF_LOG_INFO("PATH UPDATED");
+                                                  }
+                                                  sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
+                                                  data_queue_pop();
+                                            }
+                    break;
 
-                case      PACKET_PING : 
-                                        pingPacket();
-                                        ping_ins_queue_pop();
+                    case      PACKET_PING : 
+                                            pingPacket();
+                                            ping_ins_queue_pop();
                 
-                break;
+                    break;
 
-                case      PACKET_INS  : 
-                                        storePath();
-                                        ping_ins_queue_pop(); 
-                                        insDone = 1;                                    
-                break;
+                    case      PACKET_INS  : 
+                                            storePath();
+                                            ping_ins_queue_pop(); 
+                                            insDone = 1;                                    
+                    break;
 
-                case      PACKET_PUSH :
-                                        sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
-                                        data_queue_pop();
-                break;
+                    case      PACKET_PUSH :
+                                            sendDataBidirectional( data_queue[data_queue_tail].data[POS_DIRECTION] );
+                                            data_queue_pop();
+                    break;
 
-           }
+               }
            
-           if (DiagnosticTest == 1)
-           {
-                pingNodes();
-                DiagnosticTest = 0;
-           }                        
+               if (DiagnosticTest == 1)
+               {
+                    pingNodes();
+                    DiagnosticTest = 0;
+               }                        
             
 
-            //if ( path_Index != 0 && insDone  == 1 ) // need to start the sending req/data packet 
-            if ( Uart_rx_flag == 1 )  
-            {
-                  /*
-                   * This if PASS means something path is present at DCU 
-                   * Need to check the serial number comming from SERVER with DCU having serial no
-                   * If match is there means then the SERVER request is send through the PATH to that SERIAL number node
-                   * Then same in that path only RESPONSE will come  
-                   */
-                   nrf_delay_us(500000);
-                   NRF_LOG_INFO("uart_rx_index : %d",uart_rx_index );
-                   NRF_LOG_FLUSH();
-                   matchIndex = matchSerialNo( 0, server_SerialNo );
-                  if( matchIndex != 0xFF )
-                  {
+                //if ( path_Index != 0 && insDone  == 1 ) // need to start the sending req/data packet 
+                if ( Uart_rx_flag == 1 )  
+                {
                       /*
-                       * Actually this header filling data need to take from UART(GSM)
+                       * This if PASS means something path is present at DCU 
+                       * Need to check the serial number comming from SERVER with DCU having serial no
+                       * If match is there means then the SERVER request is send through the PATH to that SERIAL number node
+                       * Then same in that path only RESPONSE will come  
                        */
-                      nrf_esb_stop_rx();
-                      fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
+                       nrf_delay_us(500000);
+                       NRF_LOG_INFO("uart_rx_index : %d",uart_rx_index );
+                       NRF_LOG_FLUSH();
+                       matchIndex = matchSerialNo( 0, server_SerialNo );
+                      if( matchIndex != 0xFF )
+                      {
+                          /*
+                           * Actually this header filling data need to take from UART(GSM)
+                           */
+                          nrf_esb_stop_rx();
 
-                      //fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
-                      memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
+#ifdef UART
+                          
+                          fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
+                          memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
 
-                      memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
-                      tx_payload.length = ( PACKET_HEADER_SIZE + (open_request1[2] + 2));
+                          memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
+                          tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);  
 
-                      //memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
-                      //tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);    
-                                
-                      uart_rx_index = 0;
-                      sendDataBidirectional( headeer.Direction );
+#else
+                          fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
+                          memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
 
-                      NRF_LOG_INFO("Command Sent to Meter");
-                  } 
-                  insDone = 0;
-                  Uart_rx_flag = 0;
-            }
+                          memcpy(tx_payload.data + sizeof(headeer), open_request1, sizeof(open_request1));
+                          tx_payload.length = ( PACKET_HEADER_SIZE + (open_request1[2] + 2));
+#endif
+                            
+                          uart_rx_index = 0;
+                          sendDataBidirectional( headeer.Direction );
+
+                          NRF_LOG_INFO("Command Sent to Meter");
+                      } 
+                      insDone = 0;
+                      Uart_rx_flag = 0;
+                }
             
         }	
 }
