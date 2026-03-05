@@ -241,7 +241,7 @@ uint8_t arrays[MAX_CIRCLE][ARRRAY_SIZE] =
 
 uint8_t base_addr_0[4] = {0xE7, 0xE7, 0xE7, 0xE7};
 uint8_t base_addr_1[4] = {0xC1, 0xC1, 0xC1, 0xC1};
-uint8_t addr_prefix[8] = {0x20};
+uint8_t addr_prefix[8] = {0x30};
 
 uint8_t DCU_BASE[4] = { 0xDC, 0xDC, 0xDC, 0xDC };
 uint8_t DCU_PREFIX[1] = { 0x01 };
@@ -264,7 +264,7 @@ uint8_t volatile Mater_Data_received = 0;
 uint16_t length = 0;
 uint8_t i = 0;
 uint8_t sent_bytes_count = 0;
-uint8_t Current_Circle = 0;
+uint8_t Current_Circle = 1;
 uint8_t uartbuff[2048];
 uint8_t Nxt_table_index;
 uint8_t Prev_table_index;
@@ -290,7 +290,7 @@ void sort_neighbors_by_rssi(neighbor_t *table, int n)
         neighbor_t key = table[i];
         int j = i - 1;
 
-        while (j >= 0 && table[j].rssi < key.rssi)
+        while (j >= 0 && table[j].rssi > key.rssi)
         {
             table[j + 1] = table[j];
             j--;
@@ -786,13 +786,13 @@ void pingPacket(void)
                 header.packet_type = PACKET_PING;
                 header.length = STORE_NODE_INFO;
                 
-                if(ping_ins_queue[ping_ins_queue_tail].data[(POS_CIRCLE_ARRAY+ Current_Circle) - 1] != 0 ) 
-                {
-                      header.Direction = BACKWORD;
+                if(ping_ins_queue[ping_ins_queue_tail].data[( POS_CIRCLE_ARRAY + Current_Circle ) + 1] != 0 ) 
+                {                     
+                      header.Direction = FORWARD;
                 }
                 else
                 {
-                      header.Direction = FORWARD;
+                      header.Direction = BACKWORD;
                 }
                 memcpy(tx_payload.data,&header,sizeof(header));
                 memcpy(tx_payload.data + sizeof(header), &advertisment_pcket, sizeof(advertisment_pcket));
@@ -963,25 +963,25 @@ void doDiagnosticTest(void)
       if (Current_Circle == MIN_CIRCLE)
       {
           pingNodes( Current_Circle + 1 );
-          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index );
           print_neighbors( Nxt_neighbor_table, Nxt_table_index );
          
       }
       else if (Current_Circle == MAX_CIRCLE)
       {
           pingNodes( Current_Circle - 1 );
-          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1);
-          print_neighbors( Nxt_neighbor_table, Nxt_table_index );
+          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index);
+          print_neighbors( Prev_neighbor_table, Prev_table_index );
           
       }
       else
       {
           pingNodes( Current_Circle - 1 );
-          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index - 1); 
-          print_neighbors( Nxt_neighbor_table, Nxt_table_index );        
+          sort_neighbors_by_rssi(Prev_neighbor_table, Prev_table_index ); 
+          print_neighbors( Prev_neighbor_table, Prev_table_index );        
 
           pingNodes( Current_Circle + 1 );
-          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index - 1);
+          sort_neighbors_by_rssi(Nxt_neighbor_table, Nxt_table_index );
           print_neighbors( Nxt_neighbor_table, Nxt_table_index );
       }
 

@@ -548,7 +548,7 @@ void pingNodes( void )
               nrf_delay_ms(500);
               pingPacket();
               ping_ins_queue_pop();
-              RF_event = NOT_DEFINED;
+              RF_event = EVENT_NOT_DEFINED;
           }
     }
 
@@ -791,6 +791,7 @@ void nrf_esb_event_handler(nrf_esb_evt_t const * p_event)
               case    NRF_ESB_EVENT_TX_SUCCESS:
 
                                                 NRF_LOG_DEBUG("TX SUCCESS EVENT");
+                                                NRF_LOG_FLUSH();
                                                 RF_event = EVENT_TX_SUCCESS;
                                                 Blink_LEDs();                      
 
@@ -1033,14 +1034,14 @@ void updatepath(void)
 uint8_t insDone = 0;
 uint8_t DiagnosticTest = 0;
 
-int main(void) {
+int main(void) 
+{
 	ret_code_t err_code;
 
 	struct Packet_Header hdr;
 	uint32_t nextBytes = 0;
         uint8_t matchIndex = 0;
         
-
 	gpio_init();
 
 	err_code = NRF_LOG_INIT(NULL);  
@@ -1143,13 +1144,15 @@ int main(void) {
                            */
                           nrf_esb_stop_rx();
 
+                          #define UART
+
 #ifdef UART
                           
                           fillHeader(PACKET_DATA, FORWARD, uart_rx_index, PATH_ARRAY[matchIndex].path, 0, 0);
                           memcpy(tx_payload.data, &headeer, sizeof(headeer)); 
 
                           memcpy(tx_payload.data + sizeof(headeer), uart_out_data, uart_rx_index);
-                          tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index);  
+                          tx_payload.length = ( PACKET_HEADER_SIZE + uart_rx_index );  
 
 #else
                           fillHeader(PACKET_DATA, FORWARD, sizeof(open_request1), PATH_ARRAY[matchIndex].path, 0, 0);
